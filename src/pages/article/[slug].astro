@@ -71,7 +71,7 @@ const isDev = import.meta.env.DEV;
 <Layout 
   title={`${title} | miyabittiのテックブログ`} 
   description={description}
-  ogImage={image || `/ogp/article/${entry.id}.webp`}
+  ogImage={`/ogp/article/${entry.id}.webp`}
   ogType="article"
 >
   <Fragment slot="head">

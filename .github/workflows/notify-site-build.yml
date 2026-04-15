@@ -1,0 +1,20 @@
+name: Notify Portfolio From techBlog
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Trigger portfolio rebuild
+        run: |
+          curl -L \
+            -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${{ secrets.PORTFOLIO_TRIGGER_TOKEN }}" \
+            https://api.github.com/repos/miyabitti256/root-domain-site/dispatches \
+            -d '{"event_type":"rebuild-site","client_payload":{"source":"blog"}}'
