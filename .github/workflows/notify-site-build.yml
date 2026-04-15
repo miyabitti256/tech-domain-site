@@ -1,4 +1,4 @@
-name: Notify Portfolio From techBlog
+name: Notify Portfolio From Blog
 
 on:
   push:
