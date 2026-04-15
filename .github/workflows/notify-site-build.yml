@@ -2,6 +2,7 @@ name: Notify Portfolio From Blog
 
 on:
   push:
+    branches:
       - main
 
 jobs:
