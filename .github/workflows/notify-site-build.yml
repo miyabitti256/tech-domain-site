@@ -11,12 +11,13 @@ jobs:
 
     steps:
       - name: Trigger portfolio rebuild
+        env:
+          GH_TOKEN: ${{ secrets.PORTFOLIO_TRIGGER_TOKEN }}
         run: |
-          curl -L \
-            -X POST \
+          gh api \
+            --method POST \
             -H "Accept: application/vnd.github+json" \
-            -H "Authorization: Bearer ${{ secrets.PORTFOLIO_TRIGGER_TOKEN }}" \
-            -H "Content-Type: application/json" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
-            https://api.github.com/repos/miyabitti256/root-domain-site/dispatches \
-            -d '{"event_type":"rebuild-site","client_payload":{"source":"blog"}}'
+            /repos/miyabitti256/root-domain-site/dispatches \
+            -f event_type='rebuild-site' \
+            -f client_payload[source]='blog'
