@@ -18,4 +18,4 @@ jobs:
             --method POST \
             /repos/miyabitti256/root-domain-site/dispatches \
             -f event_type="rebuild-site" \
-            -f client_payload='{"source":"tech-blog"}'
+            -F client_payload='{"source":"tech-blog"}'
