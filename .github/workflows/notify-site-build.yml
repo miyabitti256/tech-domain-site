@@ -15,6 +15,6 @@ jobs:
           curl -L \
             -X POST \
             -H "Accept: application/vnd.github+json" \
-            -H "Authroization: Bearer ${{ secrets.PORTFOLIO_TRIGGER_TOKEN }}" \
-            https://api.github.com/repo/miyabitti256/root-domain-site/dispatches \
+            -H "Authorization: Bearer ${{ secrets.PORTFOLIO_TRIGGER_TOKEN }}" \
+            https://api.github.com/repos/miyabitti256/root-domain-site/dispatches \
             -d '{"event_type":"rebuild-site","client_payload:"{"source:"blog"}}'
