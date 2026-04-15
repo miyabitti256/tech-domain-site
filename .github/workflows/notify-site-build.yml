@@ -16,5 +16,6 @@ jobs:
             -X POST \
             -H "Accept: application/vnd.github+json" \
             -H "Authorization: Bearer ${{ secrets.PORTFOLIO_TRIGGER_TOKEN }}" \
+            -H "Content-Type: application/json" \
             https://api.github.com/repos/miyabitti256/root-domain-site/dispatches \
             -d '{"event_type":"rebuild-site","client_payload":{"source":"blog"}}'
