@@ -1,0 +1,74 @@
+---
+import { Image } from "astro:assets";
+import { Rss } from "@lucide/astro";
+import Github from "simple-icons-astro/github";
+import X from "simple-icons-astro/X";
+import Zenn from "simple-icons-astro/Zenn";
+
+const socialLinks = [
+	{
+		name: "GitHub",
+		href: "https://github.com/miyabitti256",
+		icon: Github,
+		color: "hover:text-[#181717] dark:hover:text-white",
+	},
+	{
+		name: "X",
+		href: "https://x.com/miyabitti0256",
+		icon: X,
+		color: "hover:text-foreground",
+	},
+	{
+		name: "Zenn",
+		href: "https://zenn.dev/miyabitti",
+		icon: Zenn,
+		color: "hover:text-[#3ea8ff]",
+	},
+	{
+		name: "RSS",
+		href: "/rss.xml",
+		icon: Rss,
+		color: "hover:text-[#ee802f]",
+	},
+];
+---
+
+<section id="about" class="relative pt-24 pb-24">
+  <div class="max-w-3xl px-6 mx-auto text-center">
+    <div class="relative w-32 h-32 mx-auto mb-8">
+      <div class="absolute inset-0 rounded-full bg-linear-to-tr from-primary/20 to-secondary/20 blur-2xl opacity-50"></div>
+      <div class="relative w-full h-full overflow-hidden border-4 rounded-full border-background shadow-xl">
+        <Image 
+          src={"/avatar.webp"} 
+          alt="miyabitti" 
+          width={256} 
+          height={256}
+          class="object-cover w-full h-full"
+        />
+      </div>
+    </div>
+
+    <h2 class="mb-4 text-3xl font-bold tracking-tight text-foreground">About Me</h2>
+    
+    <p class="mb-10 text-lg leading-relaxed text-muted-foreground">
+      こんにちは、miyabitti です。<br />
+      Webデザインとフロントエンド開発を勉強しています。<br />
+      ユーザーにとって使いやすく、見た目も美しいUIを作ることを目標にしています。<br />
+      フロントエンドフレームワーク/ライブラリを中心に学習中。
+    </p>
+
+    <div class="flex items-center justify-center gap-6">
+      {socialLinks.map((social) => (
+        <a 
+          href={social.href} 
+          target="_blank" 
+          rel="noopener noreferrer"
+          class={`flex items-center justify-center w-12 h-12 transition-all duration-300 border rounded-2xl border-border bg-background/50 backdrop-blur-sm text-muted-foreground ${social.color} hover:border-current hover:-translate-y-1 hover:shadow-lg`}
+          aria-label={social.name}
+        >
+          <social.icon class="w-5 h-5" />
+        </a>
+      ))}
+    </div>
+  </div>
+</section>

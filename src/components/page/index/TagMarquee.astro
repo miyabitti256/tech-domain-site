@@ -1,0 +1,158 @@
+---
+import { getCollection } from "astro:content";
+
+const allPosts = await getCollection("article");
+const rawTags = allPosts.flatMap((post) => post.data.tags || []);
+// 重複排除して小文字化
+const uniqueTags = [...new Set(rawTags.map((tag) => tag.toLowerCase()))];
+
+// ビルド時は最低2セット配置。足りない場合はJSで追加クローンする
+
+// Viteの解析制限を回避するため、globでアイコンを全件スキャン
+// biome-ignore lint/suspicious/noExplicitAny: import.meta.globで取得できる型がanyであるため
+const iconComponents = import.meta.glob<Record<string, any>>(
+	"../../../../node_modules/simple-icons-astro/dist/*.astro",
+	{
+		eager: true,
+	},
+);
+
+// タグ名からSimple Iconsのファイル名を生成するユーティリティ
+const getIconFileName = (tag: string) => {
+	// 基本的な変換規則: 小文字化し、記号を単語に置換
+	const name = tag
+		.toLowerCase()
+		.replace(/\./g, "dot")
+		.replace(/\+/g, "plus")
+		.replace(/\s+/g, "");
+
+	// 先頭を大文字にする (Simple Icons Astroの命名規則)
+	return name.charAt(0).toUpperCase() + name.slice(1);
+};
+
+// アイコンコンポーネントを取得
+const iconMap = Object.fromEntries(
+	uniqueTags.map((tag) => {
+		const fileName = getIconFileName(tag);
+		const path = `../../../../node_modules/simple-icons-astro/dist/${fileName}.astro`;
+		const mod = iconComponents[path];
+		return [tag, mod?.default || null];
+	}),
+);
+---
+
+<div class="w-full py-4 overflow-hidden border-y border-border bg-muted/10">
+  <div class="marquee-track flex items-center whitespace-nowrap gap-8 shrink-0" aria-hidden="false">
+    {/* 1セット目（data-marquee-set で識別） */}
+    <div class="contents" data-marquee-set>
+      {uniqueTags.map((tag) => {
+        const IconComponent = iconMap[tag];
+        return (
+          <a href={`/search?tag=${tag}`} class="marquee-tag flex items-center gap-2 px-4 py-2 text-sm font-medium no-underline transition-all border rounded-full text-muted-foreground border-border bg-background hover:text-foreground hover:border-foreground/30 hover:shadow-sm shrink-0 cursor-pointer">
+            {IconComponent && <IconComponent class="w-4 h-4 fill-current" />}
+            #{tag}
+          </a>
+        );
+      })}
+    </div>
+    {/* 2セット目（最低限のループ用） */}
+    <div class="contents" data-marquee-set aria-hidden="true">
+      {uniqueTags.map((tag) => {
+        const IconComponent = iconMap[tag];
+        return (
+          <a href={`/search?tag=${tag}`} tabindex="-1" class="marquee-tag flex items-center gap-2 px-4 py-2 text-sm font-medium no-underline transition-all border rounded-full text-muted-foreground border-border bg-background hover:text-foreground hover:border-foreground/30 hover:shadow-sm shrink-0 cursor-pointer">
+            {IconComponent && <IconComponent class="w-4 h-4 fill-current" />}
+            #{tag}
+          </a>
+        );
+      })}
+    </div>
+  </div>
+</div>
+
+<style>
+  .marquee-track {
+    animation: marquee-scroll var(--marquee-duration, 30s) linear infinite;
+    will-change: transform;
+  }
+
+  .marquee-track:hover {
+    animation-play-state: paused;
+  }
+
+  @keyframes marquee-scroll {
+    0% {
+      transform: translateX(0);
+    }
+    100% {
+      transform: translateX(var(--marquee-offset, -50%));
+    }
+  }
+</style>
+
+<script>
+  function initMarquee() {
+    const track = document.querySelector<HTMLElement>('.marquee-track');
+    if (!track) return;
+
+    // data-marquee-set で囲まれたセットを取得
+    const sets = Array.from(track.querySelectorAll<HTMLElement>('[data-marquee-set]'));
+    if (sets.length === 0) return;
+
+    // 1セット目の実際の幅を計測
+    const firstSet = sets[0];
+    const items = Array.from(firstSet.children) as HTMLElement[];
+    const gap = parseFloat(getComputedStyle(track).columnGap || '0');
+    let setWidth = 0;
+    for (let i = 0; i < items.length; i++) {
+      setWidth += items[i].offsetWidth;
+      if (i < items.length - 1) setWidth += gap;
+    }
+    // セット間のgap
+    setWidth += gap;
+
+    // ビューポートを埋めるのに必要なセット数を算出（最低3、最大4）
+    const viewportWidth = window.innerWidth;
+    const neededSets = Math.max(3, Math.min(4, Math.ceil((viewportWidth * 2) / setWidth) + 1));
+    const currentSets = sets.length;
+
+    // 不足分をクローンで追加
+    if (currentSets < neededSets) {
+      for (let i = currentSets; i < neededSets; i++) {
+        const clone = firstSet.cloneNode(true) as HTMLElement;
+        clone.setAttribute('aria-hidden', 'true');
+        // クローン内のリンクをフォーカス不可にする
+        clone.querySelectorAll('a').forEach(a => a.setAttribute('tabindex', '-1'));
+        track.appendChild(clone);
+      }
+    }
+    // 過剰分を削除（リサイズで縮小した場合）
+    if (currentSets > neededSets) {
+      const allSets = Array.from(track.querySelectorAll<HTMLElement>('[data-marquee-set]'));
+      for (let i = neededSets; i < allSets.length; i++) {
+        allSets[i].remove();
+      }
+    }
+
+    // px指定で正確にオフセット（1セット分だけ移動）
+    track.style.setProperty('--marquee-offset', `-${setWidth}px`);
+
+    // 速度を一定に保つ (50px/s 程度)
+    const pxPerSec = 50;
+    const duration = setWidth / pxPerSec;
+    track.style.setProperty('--marquee-duration', `${duration}s`);
+  }
+
+  // 初回
+  initMarquee();
+
+  // View Transitionsでページ復帰時に再計測
+  document.addEventListener('astro:page-load', initMarquee);
+
+  // リサイズ時に再計測
+  let resizeTimer: ReturnType<typeof setTimeout>;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(initMarquee, 200);
+  });
+</script>

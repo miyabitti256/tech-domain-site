@@ -1,0 +1,153 @@
+---
+import type { GetStaticPaths, Page } from "astro";
+import Bookcard from "@/components/common/Bookcard.astro";
+import {
+	Pagination,
+	PaginationContent,
+	PaginationEllipsis,
+	PaginationItem,
+	PaginationLink,
+	PaginationNext,
+	PaginationPrevious,
+} from "@/components/starwind/pagination";
+import type { BookMeta } from "@/contents/book/types";
+import Layout from "@/layouts/Layout.astro";
+
+export const getStaticPaths = (async ({ paginate }) => {
+	const metaModules = import.meta.glob<{ default: BookMeta }>(
+		"/src/contents/book/*/meta.ts",
+		{ eager: true },
+	);
+
+	const allBooks = Object.entries(metaModules)
+		.map(([filepath, mod]) => {
+			const slug = filepath.split("/").at(-2) ?? "";
+			const meta = mod.default;
+			return {
+				slug,
+				url: `/book/${slug}`,
+				title: meta.title,
+				description: meta.description,
+				chaptersCount: meta.chapters.length,
+				tags: meta.tags,
+				publishedAt: new Date(meta.publishedAt),
+				coverImg: meta.coverImg,
+			};
+		})
+		.sort((a, b) => b.publishedAt.getTime() - a.publishedAt.getTime());
+
+	return paginate(allBooks, { pageSize: 9 });
+}) satisfies GetStaticPaths;
+
+type BookData = {
+	slug: string;
+	url: string;
+	title: string;
+	description: string;
+	chaptersCount: number;
+	tags: string[];
+	publishedAt: Date;
+	coverImg: string;
+};
+
+const { page } = Astro.props as { page: Page<BookData> };
+const books = page.data;
+
+// ページネーション用のページ番号配列を生成
+function getPageNumbers(
+	current: number,
+	total: number,
+): (number | "ellipsis")[] {
+	if (total <= 7) {
+		return Array.from({ length: total }, (_, i) => i + 1);
+	}
+
+	const pages: (number | "ellipsis")[] = [1];
+
+	if (current > 3) {
+		pages.push("ellipsis");
+	}
+
+	const start = Math.max(2, current - 1);
+	const end = Math.min(total - 1, current + 1);
+
+	for (let i = start; i <= end; i++) {
+		pages.push(i);
+	}
+
+	if (current < total - 2) {
+		pages.push("ellipsis");
+	}
+
+	pages.push(total);
+	return pages;
+}
+
+const pageNumbers = getPageNumbers(page.currentPage, page.lastPage);
+const basePath = "/book";
+const getPageUrl = (n: number) => (n === 1 ? basePath : `${basePath}/${n}`);
+---
+
+<Layout title={`Books${page.currentPage > 1 ? ` - Page ${page.currentPage}` : ""} | miyabittiのテックブログ`}>
+  <main class="py-8">
+    <div class="px-6 mx-auto max-w-6xl">
+      <div class="mb-16">
+        <h1 class="text-4xl md:text-5xl font-bold tracking-tight text-foreground mb-4">Books</h1>
+        <h2 class="text-lg text-muted-foreground max-w-2xl">
+          シリーズ連載や章構成のドキュメントをまとめています。
+        </h2>
+      </div>
+
+      <div class="grid gap-x-12 gap-y-16 md:grid-cols-2 lg:grid-cols-3">
+        {books.map((book) => (
+          <Bookcard {...book} />
+        ))}
+      </div>
+
+      {books.length === 0 && (
+        <div class="py-20 text-center border border-dashed rounded-3xl border-border bg-muted/5">
+          <p class="text-muted-foreground">ブックがまだありません。</p>
+        </div>
+      )}
+
+      {/* Pagination */}
+      {page.lastPage > 1 && (
+        <div class="mt-16">
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                {page.url.prev ? (
+                  <PaginationPrevious href={page.url.prev} />
+                ) : (
+                  <PaginationPrevious class="pointer-events-none opacity-50" />
+                )}
+              </PaginationItem>
+
+              {pageNumbers.map((p) =>
+                p === "ellipsis" ? (
+                  <PaginationItem>
+                    <PaginationEllipsis />
+                  </PaginationItem>
+                ) : (
+                  <PaginationItem>
+                    <PaginationLink href={getPageUrl(p)} isActive={p === page.currentPage}>
+                      {p}
+                    </PaginationLink>
+                  </PaginationItem>
+                )
+              )}
+
+              <PaginationItem>
+                {page.url.next ? (
+                  <PaginationNext href={page.url.next} />
+                ) : (
+                  <PaginationNext class="pointer-events-none opacity-50" />
+                )}
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+        </div>
+      )}
+    </div>
+  </main>
+</Layout>

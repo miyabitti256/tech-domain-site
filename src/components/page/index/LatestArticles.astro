@@ -1,0 +1,52 @@
+---
+import { getCollection } from "astro:content";
+import ArticleCard from "@/components/common/ArticleCard.astro";
+
+const allPosts = await getCollection("article");
+// 日付の降順でソート
+const sortedPosts = allPosts.sort(
+	(a, b) =>
+		new Date(b.data.publishedAt).getTime() -
+		new Date(a.data.publishedAt).getTime(),
+);
+
+// 最新の6件を「最新記事」とする
+const latestPosts = sortedPosts.slice(0, 6);
+---
+
+<section id="latest" class="py-8">
+  <div class="px-6 mx-auto max-w-6xl">
+    <div class="flex items-center justify-between mb-10">
+      <h2 class="text-3xl font-bold tracking-tight text-foreground">Latest Articles</h2>
+      <a href="/article" class="text-sm font-medium transition-colors hover:underline text-muted-foreground hover:text-foreground">
+        View all &rarr;
+      </a>
+    </div>
+    
+    <div class="articles-grid">
+      {latestPosts.map(post => (
+        <ArticleCard post={post} />
+      ))}
+    </div>
+  </div>
+</section>
+
+<style>
+  .articles-grid {
+    display: grid;
+    gap: 1.5rem;
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+  }
+
+  @media (min-width: 768px) {
+    .articles-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .articles-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+</style>

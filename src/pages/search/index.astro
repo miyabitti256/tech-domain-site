@@ -1,0 +1,444 @@
+---
+import { Search as SearchIcon } from "@lucide/astro";
+import Layout from "@/layouts/Layout.astro";
+
+const title = "Search | miyabittiのテックブログ";
+---
+
+<Layout title={title}>
+  <main class="py-8">
+    <div class="px-6 mx-auto max-w-6xl">
+
+      {/* Search Header */}
+      <div class="mb-16">
+        <h1 class="text-4xl md:text-5xl font-bold tracking-tight text-foreground mb-4">Search</h1>
+        <p class="text-lg text-muted-foreground max-w-2xl">
+          記事をタイトル、説明、タグで検索できます。
+        </p>
+      </div>
+
+      {/* Search Input Area */}
+      <div class="relative mb-12">
+        <div class="absolute inset-y-0 left-0 flex items-center pl-5 pointer-events-none text-muted-foreground">
+          <SearchIcon size={20} />
+        </div>
+        <input
+          type="text"
+          id="search-page-input"
+          class="w-full py-4 pl-14 pr-6 text-lg bg-muted/20 border border-border rounded-2xl outline-none placeholder:text-muted-foreground/50 text-foreground focus:ring-0 focus:border-foreground focus:bg-muted/30 transition-all duration-300 font-mono"
+          placeholder="キーワードを入力..."
+          autocomplete="off"
+          autofocus
+        />
+        <div id="search-status" class="absolute inset-y-0 right-0 flex items-center pr-5 text-sm text-muted-foreground font-mono">
+        </div>
+      </div>
+
+      {/* Active Tag Filter Banner */}
+      <div id="tag-filter-banner" class="hidden mb-8 px-5 py-3 rounded-xl bg-primary/5 border border-primary/20 items-center gap-3">
+        <span class="text-sm text-muted-foreground">タグで絞り込み中:</span>
+        <span id="tag-filter-name" class="px-3 py-1 text-sm font-medium border rounded-full bg-primary/10 text-primary border-primary/20"></span>
+        <button id="tag-filter-clear" class="ml-auto text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer">✕ クリア</button>
+      </div>
+
+      {/* Loading Skeleton */}
+      <div id="search-skeleton" class="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+        {Array.from({ length: 6 }).map(() => (
+          <div class="flex flex-col h-full overflow-hidden border rounded-2xl border-border bg-background/50 animate-pulse">
+            <div class="aspect-video bg-muted/40"></div>
+            <div class="p-6 space-y-3">
+              <div class="h-3 w-24 bg-muted/40 rounded"></div>
+              <div class="h-5 w-3/4 bg-muted/40 rounded"></div>
+              <div class="h-3 w-full bg-muted/40 rounded"></div>
+              <div class="h-3 w-2/3 bg-muted/40 rounded"></div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Search Results */}
+      <div id="search-results" class="hidden gap-8 md:grid-cols-2 lg:grid-cols-3">
+      </div>
+
+      {/* Pagination (rendered by JS) */}
+      <nav id="search-pagination" role="navigation" aria-label="pagination" class="hidden mx-auto w-full justify-center mt-16">
+      </nav>
+
+      {/* Empty State */}
+      <div id="search-empty" class="hidden py-20 text-center border border-dashed rounded-3xl border-border bg-muted/5">
+        <div class="text-4xl mb-4">🔍</div>
+        <p class="text-muted-foreground text-lg mb-2">一致する記事が見つかりませんでした</p>
+        <p class="text-sm text-muted-foreground/70">別のキーワードで検索してみてください</p>
+      </div>
+
+      {/* Initial State (no query) */}
+      <div id="search-initial" class="hidden py-20 text-center border border-dashed rounded-3xl border-border bg-muted/5">
+        <div class="text-4xl mb-4">✨</div>
+        <p class="text-muted-foreground text-lg mb-2">キーワードを入力して検索してください</p>
+        <p class="text-sm text-muted-foreground/70">タイトル、説明文、タグに対して検索できます</p>
+      </div>
+
+    </div>
+  </main>
+</Layout>
+
+<script>
+  import Fuse from 'fuse.js';
+
+  interface SearchArticle {
+    id: string;
+    title: string;
+    description: string;
+    tags: string[];
+    publishedAt: string;
+    image: string | null;
+  }
+
+  const ITEMS_PER_PAGE = 9;
+
+  async function initSearch() {
+    const input = document.getElementById('search-page-input') as HTMLInputElement | null;
+    const resultsContainer = document.getElementById('search-results');
+    const skeleton = document.getElementById('search-skeleton');
+    const emptyState = document.getElementById('search-empty');
+    const initialState = document.getElementById('search-initial');
+    const statusEl = document.getElementById('search-status');
+    const paginationEl = document.getElementById('search-pagination');
+    const tagBanner = document.getElementById('tag-filter-banner');
+    const tagName = document.getElementById('tag-filter-name');
+    const tagClear = document.getElementById('tag-filter-clear');
+
+    if (!input || !resultsContainer || !skeleton || !emptyState || !initialState || !statusEl || !paginationEl) return;
+
+    // All elements are guaranteed non-null below this point
+    const _input = input;
+    const _results = resultsContainer;
+    const _skeleton = skeleton;
+    const _empty = emptyState;
+    const _initial = initialState;
+    const _status = statusEl;
+    const _pagination = paginationEl;
+
+    // Fetch the search index
+    let articles: SearchArticle[] = [];
+    try {
+      const res = await fetch('/search-index.json');
+      articles = await res.json();
+    } catch (e) {
+      console.error('Failed to fetch search index:', e);
+      _skeleton.classList.add('hidden');
+      _empty.classList.remove('hidden');
+      return;
+    }
+
+    // Initialize Fuse.js
+    const fuse = new Fuse(articles, {
+      keys: [
+        { name: 'title', weight: 0.4 },
+        { name: 'description', weight: 0.3 },
+        { name: 'tags', weight: 0.3 },
+      ],
+      threshold: 0.35,
+      ignoreLocation: true,
+      includeMatches: true,
+      minMatchCharLength: 1,
+    });
+
+    // Current state
+    let currentPage = 1;
+    let currentResults: SearchArticle[] = [];
+
+    // Read initial query from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const initialQuery = urlParams.get('q') || '';
+    const initialTag = urlParams.get('tag') || '';
+    const initialPageParam = urlParams.get('page');
+    if (initialPageParam) {
+      currentPage = Math.max(1, parseInt(initialPageParam, 10) || 1);
+    }
+    
+    if (initialQuery) {
+      _input.value = initialQuery;
+    } else if (initialTag) {
+      _input.value = initialTag;
+    }
+
+    // Show/hide tag banner
+    function updateTagBanner(tag: string) {
+      if (tag && tagBanner && tagName && tagClear) {
+        tagBanner.classList.remove('hidden');
+        tagBanner.classList.add('flex');
+        tagName.textContent = `#${tag}`;
+      } else if (tagBanner) {
+        tagBanner.classList.add('hidden');
+        tagBanner.classList.remove('flex');
+      }
+    }
+
+    // Render article card HTML
+    function renderCard(article: SearchArticle): string {
+      const date = new Date(article.publishedAt).toLocaleDateString('ja-JP', {
+        year: 'numeric', month: 'short', day: 'numeric',
+      });
+
+      const imageHtml = article.image
+        ? `<img src="${article.image}" alt="${article.title}" class="object-cover w-full h-full" loading="lazy" />`
+        : `<div class="flex items-center justify-center w-full h-full text-muted-foreground">
+            <svg class="w-12 h-12 opacity-20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+          </div>`;
+
+      const firstTag = article.tags.length > 0 ? article.tags[0].toLowerCase() : '';
+      const extraTags = article.tags.slice(1, 4);
+      const moreCount = article.tags.length > 4 ? article.tags.length - 4 : 0;
+
+      const firstTagHtml = firstTag
+        ? `<span>&bull;</span><span class="font-medium text-foreground/80">${firstTag}</span>`
+        : '';
+
+      const extraTagsHtml = extraTags.length > 0
+        ? `<div class="flex flex-wrap items-center gap-2 mt-auto">
+            ${extraTags.map(t => `<span class="px-2.5 py-0.5 text-[10px] font-medium tracking-wider uppercase border border-border rounded-full text-muted-foreground bg-muted/10">${t}</span>`).join('')}
+            ${moreCount > 0 ? `<span class="text-xs text-muted-foreground">+${moreCount}</span>` : ''}
+          </div>`
+        : '';
+
+      return `
+        <a href="/article/${article.id}" class="block group search-result-card" style="opacity:0;transform:translateY(12px)">
+          <article class="flex flex-col h-full overflow-hidden transition-all duration-300 border rounded-2xl border-border bg-background/50 backdrop-blur-sm hover:shadow-lg hover:-translate-y-1">
+            <div class="relative overflow-hidden aspect-video bg-muted/30">
+              ${imageHtml}
+            </div>
+            <div class="flex flex-col flex-1 p-6">
+              <div class="flex items-center gap-3 mb-3 text-xs text-muted-foreground">
+                <time datetime="${article.publishedAt}">${date}</time>
+                ${firstTagHtml}
+              </div>
+              <h3 class="mb-2 text-xl font-bold tracking-tight transition-colors text-foreground group-hover:text-foreground/80 line-clamp-2">
+                ${article.title}
+              </h3>
+              <p class="mb-4 text-sm leading-relaxed text-muted-foreground line-clamp-3">
+                ${article.description}
+              </p>
+              ${extraTagsHtml}
+            </div>
+          </article>
+        </a>
+      `;
+    }
+
+    // Generate page number array with ellipsis
+    function getPageNumbers(current: number, total: number): (number | 'ellipsis')[] {
+      if (total <= 7) {
+        return Array.from({ length: total }, (_, i) => i + 1);
+      }
+      const pages: (number | 'ellipsis')[] = [1];
+      if (current > 3) pages.push('ellipsis');
+      const start = Math.max(2, current - 1);
+      const end = Math.min(total - 1, current + 1);
+      for (let i = start; i <= end; i++) pages.push(i);
+      if (current < total - 2) pages.push('ellipsis');
+      pages.push(total);
+      return pages;
+    }
+
+    // Render pagination controls
+    function renderPagination(totalResults: number, page: number) {
+      const totalPages = Math.ceil(totalResults / ITEMS_PER_PAGE);
+      if (totalPages <= 1) {
+        _pagination.classList.add('hidden');
+        _pagination.classList.remove('flex');
+        return;
+      }
+
+      const pageNumbers = getPageNumbers(page, totalPages);
+      const prevDisabled = page <= 1;
+      const nextDisabled = page >= totalPages;
+
+      // Chevron SVGs
+      const chevronLeft = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="transition-transform group-hover:-translate-x-1"><path d="m15 18-6-6 6-6"/></svg>`;
+      const chevronRight = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="transition-transform group-hover:translate-x-1"><path d="m9 18 6-6-6-6"/></svg>`;
+      const dotsIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>`;
+
+      const btnBase = 'inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer';
+      const btnGhost = `${btnBase} hover:bg-accent hover:text-accent-foreground`;
+      const btnOutline = `${btnBase} border border-input bg-background hover:bg-accent hover:text-accent-foreground`;
+      const sizeIcon = 'h-11 w-11';
+      const sizeMd = 'h-11 px-4 py-2';
+
+      let html = `<ul class="flex flex-row items-center gap-1">`;
+      
+      // Previous button
+      html += `<li><button data-page="${page - 1}" class="group gap-1 ${btnGhost} ${sizeMd} ${prevDisabled ? 'pointer-events-none opacity-50' : ''}" ${prevDisabled ? 'disabled' : ''} aria-label="Go to previous page">${chevronLeft}</button></li>`;
+
+      // Page numbers
+      for (const p of pageNumbers) {
+        if (p === 'ellipsis') {
+          html += `<li><span class="flex items-center justify-center ${sizeIcon}">${dotsIcon}<span class="sr-only">More pages</span></span></li>`;
+        } else {
+          const isActive = p === page;
+          const variant = isActive ? btnOutline : btnGhost;
+          html += `<li><button data-page="${p}" class="${variant} ${sizeIcon}" ${isActive ? 'aria-current="page"' : ''}>${p}</button></li>`;
+        }
+      }
+
+      // Next button
+      html += `<li><button data-page="${page + 1}" class="group gap-1 ${btnGhost} ${sizeMd} ${nextDisabled ? 'pointer-events-none opacity-50' : ''}" ${nextDisabled ? 'disabled' : ''} aria-label="Go to next page">${chevronRight}</button></li>`;
+
+      html += `</ul>`;
+
+      _pagination.innerHTML = html;
+      _pagination.classList.remove('hidden');
+      _pagination.classList.add('flex');
+
+      // Bind click events
+      _pagination.querySelectorAll<HTMLButtonElement>('button[data-page]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const targetPage = parseInt(btn.dataset.page || '1', 10);
+          if (targetPage >= 1 && targetPage <= totalPages) {
+            currentPage = targetPage;
+            updateURL(_input.value, undefined, currentPage);
+            renderResults();
+            // Scroll to top of results
+            _results.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        });
+      });
+    }
+
+    // Render current page of results
+    function renderResults() {
+      const start = (currentPage - 1) * ITEMS_PER_PAGE;
+      const end = start + ITEMS_PER_PAGE;
+      const pageItems = currentResults.slice(start, end);
+
+      _results.innerHTML = pageItems.map(renderCard).join('');
+      _results.classList.remove('hidden');
+      _results.classList.add('grid');
+
+      // Staggered entrance animation
+      const cards = _results.querySelectorAll<HTMLElement>('.search-result-card');
+      cards.forEach((card, i) => {
+        setTimeout(() => {
+          card.style.transition = 'opacity 0.3s ease-out, transform 0.3s ease-out';
+          card.style.opacity = '1';
+          card.style.transform = 'translateY(0)';
+        }, i * 60);
+      });
+
+      renderPagination(currentResults.length, currentPage);
+    }
+
+    // Perform search and render results
+    function performSearch(query: string) {
+      _skeleton.classList.add('hidden');
+
+      if (!query.trim()) {
+        _results.classList.add('hidden');
+        _empty.classList.add('hidden');
+        _initial.classList.remove('hidden');
+        _pagination.classList.add('hidden');
+        _pagination.classList.remove('flex');
+        _status.textContent = '';
+        return;
+      }
+
+      _initial.classList.add('hidden');
+
+      // Check if this is a tag-exact search
+      const tagParam = new URLSearchParams(window.location.search).get('tag');
+
+      if (tagParam) {
+        // Tag filter: exact match on tags array
+        const lowerTag = tagParam.toLowerCase();
+        currentResults = articles.filter(a =>
+          a.tags.some(t => t.toLowerCase() === lowerTag)
+        );
+      } else {
+        // Fuse.js fuzzy search
+        const fuseResults = fuse.search(query);
+        currentResults = fuseResults.map(r => r.item);
+      }
+
+      if (currentResults.length === 0) {
+        _results.classList.add('hidden');
+        _empty.classList.remove('hidden');
+        _pagination.classList.add('hidden');
+        _pagination.classList.remove('flex');
+        _status.textContent = '0 件';
+        return;
+      }
+
+      _empty.classList.add('hidden');
+      _status.textContent = `${currentResults.length} 件`;
+
+      renderResults();
+    }
+
+    // Debounce utility
+    let debounceTimer: ReturnType<typeof setTimeout>;
+    function debounce(fn: () => void, delay: number) {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(fn, delay);
+    }
+
+    // Update URL without page reload
+    function updateURL(query: string, tag?: string, page?: number) {
+      const url = new URL(window.location.href);
+      if (query) {
+        url.searchParams.set('q', query);
+      } else {
+        url.searchParams.delete('q');
+      }
+      if (tag) {
+        url.searchParams.set('tag', tag);
+      } else if (tag === '') {
+        url.searchParams.delete('tag');
+      }
+      if (page && page > 1) {
+        url.searchParams.set('page', String(page));
+      } else {
+        url.searchParams.delete('page');
+      }
+      history.replaceState(null, '', url.toString());
+    }
+
+    // Input event: real-time search
+    _input.addEventListener('input', () => {
+      const query = _input.value;
+      debounce(() => {
+        // Reset to page 1 on new search
+        currentPage = 1;
+        // Clear tag filter when typing
+        updateTagBanner('');
+        updateURL(query, '');
+        performSearch(query);
+      }, 200);
+    });
+
+    // Tag filter clear
+    tagClear?.addEventListener('click', () => {
+      updateTagBanner('');
+      currentPage = 1;
+      updateURL(_input.value, '');
+      performSearch(_input.value);
+    });
+
+    // Initial tag filter state
+    if (initialTag) {
+      updateTagBanner(initialTag);
+    }
+
+    // Run initial search
+    if (initialQuery || initialTag) {
+      performSearch(initialQuery || initialTag);
+    } else {
+      _skeleton.classList.add('hidden');
+      _initial.classList.remove('hidden');
+    }
+  }
+
+  // Support View Transitions
+  document.addEventListener('astro:page-load', initSearch);
+</script>

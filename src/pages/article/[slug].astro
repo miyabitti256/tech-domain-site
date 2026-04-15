@@ -1,0 +1,235 @@
+---
+import { getCollection, render } from "astro:content";
+import { RefreshCcw } from "@lucide/astro";
+import AuthorCard from "@/components/layouts/AuthorCard.astro";
+import PrevNextNav from "@/components/layouts/PrevNextNav.astro";
+import Prose from "@/components/markdown/Prose.astro";
+import TableOfContents from "@/components/markdown/TableOfContents.astro";
+import Badge from "@/components/starwind/badge/Badge.astro";
+import {
+	Breadcrumb,
+	BreadcrumbItem,
+	BreadcrumbLink,
+	BreadcrumbList,
+	BreadcrumbPage,
+	BreadcrumbSeparator,
+} from "@/components/starwind/breadcrumb";
+import Layout from "@/layouts/Layout.astro";
+import "@/styles/articledetail.css";
+
+export async function getStaticPaths() {
+	const articles = await getCollection("article");
+	const sorted = articles.sort(
+		(a, b) =>
+			new Date(b.data.publishedAt).valueOf() -
+			new Date(a.data.publishedAt).valueOf(),
+	);
+	return sorted.map((entry, index) => {
+		const related = sorted
+			.filter(
+				(a) =>
+					a.id !== entry.id &&
+					a.data.tags?.some((t: string) => entry.data.tags?.includes(t)),
+			)
+			.slice(0, 3);
+
+		return {
+			params: { slug: entry.id },
+			props: {
+				entry,
+				prev: index < sorted.length - 1 ? sorted[index + 1] : null,
+				next: index > 0 ? sorted[index - 1] : null,
+				related,
+			},
+		};
+	});
+}
+
+const { entry, prev, next, related } = Astro.props;
+const { Content, headings } = await render(entry);
+const { title, description, publishedAt, updatedAt, image, tags } = entry.data;
+
+const formattedDate = new Date(publishedAt).toLocaleDateString("ja-JP", {
+	year: "numeric",
+	month: "long",
+	day: "numeric",
+});
+
+const formattedUpdateDate = updatedAt
+	? new Date(updatedAt).toLocaleDateString("ja-JP", {
+			year: "numeric",
+			month: "long",
+			day: "numeric",
+		})
+	: null;
+
+// mermaid記法が含まれているか、かつ現在がDev環境かチェック
+const hasMermaid = entry.body?.includes("```mermaid");
+const isDev = import.meta.env.DEV;
+---
+
+<Layout 
+  title={`${title} | miyabittiのテックブログ`} 
+  description={description}
+  ogImage={image || `/ogp/article/${entry.id}.webp`}
+  ogType="article"
+>
+  <Fragment slot="head">
+    <script is:inline type="application/ld+json" set:html={JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "Article",
+      "headline": title,
+      "description": description,
+      "image": new URL(image || `/ogp/article/${entry.id}.webp`, Astro.site).href,
+      "datePublished": publishedAt.toISOString(),
+      "dateModified": updatedAt ? updatedAt.toISOString() : publishedAt.toISOString(),
+      "author": {
+        "@type": "Person",
+        "name": "miyabitti",
+        "url": "https://github.com/miyabitti256"
+      },
+      "publisher": {
+        "@type": "Organization",
+        "name": "tech.miyabitti",
+        "logo": {
+          "@type": "ImageObject",
+          "url": new URL("/avatar.webp", Astro.site).href
+        }
+      },
+      "mainEntityOfPage": {
+        "@type": "WebPage",
+        "@id": new URL(`/article/${entry.id}/`, Astro.site).href
+      }
+    })} />
+    <script is:inline type="application/ld+json" set:html={JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Home", "item": new URL("/", Astro.site).href },
+        { "@type": "ListItem", "position": 2, "name": "Articles", "item": new URL("/article/", Astro.site).href },
+        { "@type": "ListItem", "position": 3, "name": title }
+      ]
+    })} />
+  </Fragment>
+  {isDev && hasMermaid && (
+    <script type="module" is:inline>
+      import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+      mermaid.initialize({ startOnLoad: true, theme: 'base' });
+    </script>
+  )}
+
+  <main class="py-8">
+    <article class="px-6 mx-auto max-w-3xl">
+      <div class="mb-8">
+        <Breadcrumb>
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink href="/">Home</BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbLink href="/article">Articles</BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage class="line-clamp-1">{title}</BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
+      </div>
+
+      <header class="mb-12">
+        <div class="flex flex-wrap items-center gap-x-4 gap-y-2 mb-6 text-sm text-muted-foreground">
+          <time datetime={publishedAt.toISOString()}>{formattedDate}</time>
+          {updatedAt && (
+            <div class="flex items-center gap-1.5 list-none">
+              <RefreshCcw class="w-4 h-4" />
+              <time datetime={updatedAt.toISOString()}>{formattedUpdateDate}</time>
+            </div>
+          )}
+          {tags && tags.length > 0 && (
+            <>
+              <span>&bull;</span>
+              <div class="flex flex-wrap gap-2">
+                {tags.map((tag: string) => (
+                  <Badge href={`/search?tag=${encodeURIComponent(tag)}`} variant="outline">
+                    <span class="mr-0.5 text-muted-foreground">#</span>{tag}
+                  </Badge>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+
+        <h1 class="text-4xl md:text-5xl font-bold tracking-tight text-foreground mb-6 leading-[1.15]">
+          {title}
+        </h1>
+
+        {image && (
+          <div class="mb-16 overflow-hidden rounded-3xl">
+            <img src={image} alt={title} class="w-full h-auto object-cover aspect-video" fetchpriority="high" />
+          </div>
+        )}
+
+        <p class="text-xl text-muted-foreground leading-relaxed">
+          {description}
+        </p>
+      </header>
+
+      {headings && headings.length > 0 && (
+        <TableOfContents headings={headings} />
+      )}
+
+      <Prose>
+        <Content />
+      </Prose>
+
+      <footer class="mt-12 border-t border-border">
+        <div class="py-8">        
+          <AuthorCard />
+        </div>
+        <PrevNextNav
+          prev={prev ? { href: `/article/${prev.id}`, label: "前の記事", title: prev.data.title } : null}
+          next={next ? { href: `/article/${next.id}`, label: "次の記事", title: next.data.title } : null}
+          prevPlaceholder="前の記事はありません"
+          nextPlaceholder="次の記事はありません"
+        />
+
+        {/* Related Articles */}
+        {related && related.length > 0 && (
+          <div class="mb-12">
+            <h3 class="text-2xl font-bold mb-6">関連記事</h3>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {related.map((rel: any) => (
+                <a href={`/article/${rel.id}`} class="group flex flex-col gap-3">
+                  <div class="overflow-hidden rounded-xl border border-border aspect-video bg-muted/30">
+                    <img 
+                      src={rel.data.image || `/ogp/article/${rel.id}.webp`} 
+                      alt={rel.data.title} 
+                      class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
+                      loading="lazy" 
+                    />
+                  </div>
+                  <div>
+                    <h4 class="font-bold text-foreground line-clamp-2 group-hover:text-primary transition-colors">{rel.data.title}</h4>
+                    <p class="text-xs text-muted-foreground mt-1 flex items-center gap-2">
+                      <time datetime={rel.data.publishedAt.toISOString()}>
+                        {new Date(rel.data.publishedAt).toLocaleDateString("ja-JP", { year: "numeric", month: "short", day: "numeric" })}
+                      </time>
+                    </p>
+                  </div>
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div class="text-center">
+          <a href="/article" class="inline-flex items-center justify-center px-6 py-3 text-sm font-bold text-foreground bg-muted/50 rounded-xl hover:bg-muted transition-colors">
+            &larr; すべての記事を見る
+          </a>
+        </div>
+      </footer>
+    </article>
+  </main>
+</Layout>

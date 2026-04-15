@@ -1,0 +1,43 @@
+---
+import type { HTMLAttributes } from "astro/types";
+import type { VariantProps } from "tailwind-variants";
+
+import { ButtonVariants } from "@/components/starwind/button";
+
+type Props = HTMLAttributes<"a"> &
+  Omit<VariantProps<typeof ButtonVariants.button>, "variant"> & {
+    isActive?: boolean;
+  };
+
+export const paginationLink = ButtonVariants.button;
+
+const { class: className, isActive, size = "icon", ...rest } = Astro.props as Props;
+const href = (rest as { href?: unknown }).href;
+const isLink = typeof href === "string" && href.length > 0;
+
+const computedClass = ButtonVariants.button({
+	variant: isActive ? "outline" : "ghost",
+	size,
+	class: className,
+});
+---
+
+{isLink ? (
+	<a
+		aria-current={isActive ? "page" : undefined}
+		class={computedClass}
+		{...(rest as HTMLAttributes<"a">)}
+		data-slot="pagination-link"
+	>
+		<slot />
+	</a>
+) : (
+	<span
+		aria-current={isActive ? "page" : undefined}
+		aria-disabled="true"
+		class={computedClass}
+		data-slot="pagination-link"
+	>
+		<slot />
+	</span>
+)}

@@ -1,0 +1,44 @@
+---
+interface NavItem {
+	href: string;
+	label: string;
+	title: string;
+}
+
+interface Props {
+	prev?: NavItem | null;
+	next?: NavItem | null;
+	prevPlaceholder?: string;
+	nextPlaceholder?: string;
+}
+
+const {
+	prev = null,
+	next = null,
+	prevPlaceholder = "前のページはありません",
+	nextPlaceholder = "次のページはありません",
+} = Astro.props;
+---
+
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-16">
+  {prev ? (
+    <a href={prev.href} class="flex flex-col p-4 rounded-2xl border border-border hover:border-primary/50 transition-colors group text-left">
+      <span class="text-xs text-muted-foreground mb-1 group-hover:text-primary transition-colors">&larr; {prev.label}</span>
+      <span class="font-bold text-foreground line-clamp-2">{prev.title}</span>
+    </a>
+  ) : (
+    <div class="p-4 rounded-2xl border border-border border-dashed bg-muted/10 flex items-center text-muted-foreground text-sm">
+      {prevPlaceholder}
+    </div>
+  )}
+  {next ? (
+    <a href={next.href} class="flex flex-col p-4 rounded-2xl border border-border text-right hover:border-primary/50 transition-colors group">
+      <span class="text-xs text-muted-foreground mb-1 group-hover:text-primary transition-colors">{next.label} &rarr;</span>
+      <span class="font-bold text-foreground line-clamp-2">{next.title}</span>
+    </a>
+  ) : (
+    <div class="p-4 rounded-2xl border border-border border-dashed bg-muted/10 flex items-center justify-end text-muted-foreground text-sm text-right">
+      {nextPlaceholder}
+    </div>
+  )}
+</div>

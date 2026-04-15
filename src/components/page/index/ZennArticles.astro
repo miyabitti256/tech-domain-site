@@ -1,0 +1,123 @@
+---
+import { getCollection } from "astro:content";
+import Zenn from "simple-icons-astro/Zenn";
+
+// Content Collections から取得（ビルド/起動時に一度だけ fetch）
+const allZennArticles = await getCollection("zenn");
+
+// pubDate の降順でソートして最新3件を表示
+const articles = allZennArticles
+	.sort((a, b) => new Date(b.data.pubDate).getTime() - new Date(a.data.pubDate).getTime())
+	.slice(0, 3);
+
+const error = articles.length === 0;
+
+const formatDate = (dateString: string) => {
+	const date = new Date(dateString);
+	return date.toLocaleDateString("ja-JP", {
+		year: "numeric",
+		month: "short",
+		day: "numeric",
+	});
+};
+---
+
+<section id="zenn" class="zenn-section py-24 pb-32 bg-[#edf2f7] dark:bg-[#081d35]">
+  <div class="px-6 mx-auto max-w-6xl">
+    <div class="flex items-center justify-between mb-10">
+      <h2 class="text-3xl font-bold tracking-tight text-foreground flex items-center gap-3">
+        <Zenn class="w-8 h-8 text-[#3ea8ff]" />
+        Zenn Articles
+      </h2>
+      <a href="https://zenn.dev/miyabitti" target="_blank" rel="noopener noreferrer" class="text-sm font-medium transition-colors hover:underline text-muted-foreground hover:text-foreground">
+        View profile &rarr;
+      </a>
+    </div>
+  
+  {error ? (
+    <div class="p-8 text-center border rounded-2xl border-border bg-muted/20">
+      <p class="text-muted-foreground">記事を読み込めませんでした。</p>
+    </div>
+  ) : (
+    <div class="zenn-grid">
+      {articles.map((article) => (
+        <a href={article.data.link} target="_blank" rel="noopener noreferrer" class="block group">
+          <article class="flex flex-col h-full overflow-hidden transition-all duration-300 border rounded-2xl border-border bg-background/50 backdrop-blur-sm hover:shadow-lg hover:-translate-y-1">
+            <div class="relative overflow-hidden aspect-1200/630 bg-muted/30">
+              {article.data.imageUrl ? (
+                <img
+                  src={article.data.imageUrl}
+                  alt={article.data.title}
+                  class="object-cover w-full h-full"
+                  loading="lazy"
+                />
+              ) : (
+                <div class="flex items-center justify-center w-full h-full text-muted-foreground bg-muted/10">
+                  <Zenn class="w-12 h-12 opacity-30" />
+                </div>
+              )}
+            </div>
+            
+            <div class="flex flex-col flex-1 p-6">
+              <div class="flex items-center gap-3 mb-3 text-xs text-muted-foreground">
+                <time datetime={article.data.pubDate}>{formatDate(article.data.pubDate)}</time>
+                <span>&bull;</span>
+                <span class="font-medium text-foreground/80">Zenn</span>
+              </div>
+              
+              <h3 class="mb-2 text-xl font-bold tracking-tight transition-colors text-foreground group-hover:text-foreground/80 line-clamp-2">
+                {article.data.title}
+              </h3>
+
+              <p class="mb-4 text-sm leading-relaxed text-muted-foreground line-clamp-2">
+                {article.data.description}
+              </p>
+            </div>
+          </article>
+        </a>
+      ))}
+    </div>
+  )}
+  </div>
+</section>
+
+<style>
+  .zenn-grid {
+    display: grid;
+    gap: 1.5rem;
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+  }
+
+  @media (min-width: 768px) {
+    .zenn-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .zenn-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+
+  /* Zenn セクション下部のウェーブ */
+  .zenn-section {
+    position: relative;
+    margin-bottom: 60px;
+  }
+
+  .zenn-section::after {
+    content: "";
+    position: absolute;
+    bottom: -59px;
+    left: -5%;
+    width: 110%;
+    height: 60px;
+    background-color: #edf2f7;
+    border-radius: 0 0 50% 50% / 0 0 100% 100%;
+  }
+
+  :global(.dark) .zenn-section::after {
+    background-color: #081d35;
+  }
+</style>

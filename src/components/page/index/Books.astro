@@ -1,0 +1,53 @@
+---
+import Bookcard from "@/components/common/Bookcard.astro";
+import type { BookMeta } from "@/contents/book/types";
+
+// すべての meta.ts を一括読み込み
+const metaModules = import.meta.glob<{ default: BookMeta }>(
+	"/src/contents/book/*/meta.ts",
+	{ eager: true },
+);
+
+const books = Object.entries(metaModules)
+	.map(([filepath, mod]) => {
+		const slug = filepath.split("/").at(-2) || "";
+		const meta = mod.default;
+		return {
+			slug,
+			url: `/book/${slug}`,
+			title: meta.title,
+			description: meta.description,
+			chaptersCount: meta.chapters.length,
+			tags: meta.tags,
+			publishedAt: new Date(meta.publishedAt),
+			coverImg: meta.coverImg,
+		};
+	})
+	.sort((a, b) => b.publishedAt.getTime() - a.publishedAt.getTime())
+	.slice(0, 3);
+---
+
+<section id="books" class="py-16 bg-muted/5 border-y border-border">
+  <div class="px-6 mx-auto max-w-6xl">
+    <div class="flex items-center justify-between mb-12">
+      <div>
+        <h2 class="text-3xl font-bold tracking-tight text-foreground">Books</h2>
+      </div>
+      <a href="/book" class="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+        View all &rarr;
+      </a>
+    </div>
+    
+    <div class="grid gap-x-8 gap-y-12 md:grid-cols-2 lg:grid-cols-3">
+      {books.map(book => (
+        <Bookcard {...book} />
+      ))}
+    </div>
+
+    {books.length === 0 && (
+      <div class="py-12 text-center border-2 border-dashed rounded-3xl border-border bg-muted/5">
+        <p class="text-muted-foreground">ブックがまだありません。</p>
+      </div>
+    )}
+  </div>
+</section>

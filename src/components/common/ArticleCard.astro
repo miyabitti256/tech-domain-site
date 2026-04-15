@@ -1,0 +1,75 @@
+---
+import type { CollectionEntry } from "astro:content";
+
+interface Props {
+	post: CollectionEntry<"article">;
+}
+
+const { post } = Astro.props;
+const { title, description, publishedAt, updatedAt, tags, image } = post.data;
+
+const formattedDate = new Date(publishedAt).toLocaleDateString("ja-JP", {
+	year: "numeric",
+	month: "short",
+	day: "numeric",
+});
+
+const formattedUpdateDate = updatedAt
+	? new Date(updatedAt).toLocaleDateString("ja-JP", {
+			year: "numeric",
+			month: "short",
+			day: "numeric",
+		})
+	: null;
+---
+
+<a href={`/article/${post.id}`} class="block group">
+  <article class="flex flex-col h-full overflow-hidden transition-all duration-300 border rounded-2xl border-border bg-background/50 backdrop-blur-sm hover:shadow-lg hover:-translate-y-1">
+    <div class="relative overflow-hidden aspect-video bg-muted/30">
+      <img
+        src={image || `/ogp/article/${post.id}.webp`}
+        alt={title}
+        class="object-cover w-full h-full"
+        loading="lazy"
+      />
+    </div>
+    
+    <div class="flex flex-col flex-1 p-6">
+      <div class="flex flex-wrap items-center gap-x-3 gap-y-1 mb-3 text-xs text-muted-foreground">
+        <time datetime={publishedAt.toISOString()}>{formattedDate}</time>
+        {updatedAt && (
+          <span class="flex items-center gap-1 text-[10px] bg-muted px-1.5 py-0.5 rounded-sm">
+            更新: {formattedUpdateDate}
+          </span>
+        )}
+        {tags && tags.length > 0 && (
+          <>
+            <span>&bull;</span>
+            <span class="font-medium text-foreground/80">{tags[0].toLowerCase()}</span>
+          </>
+        )}
+      </div>
+      
+      <h3 class="mb-2 text-xl font-bold tracking-tight transition-colors text-foreground group-hover:text-foreground/80 line-clamp-2">
+        {title}
+      </h3>
+      
+      <p class="mb-4 text-sm leading-relaxed text-muted-foreground line-clamp-3">
+        {description}
+      </p>
+
+      {tags && tags.length > 1 && (
+        <div class="flex flex-wrap items-center gap-2 mt-auto">
+          {tags.slice(1, 4).map(tag => (
+            <span class="px-2.5 py-0.5 text-[10px] font-medium tracking-wider uppercase border border-border rounded-full text-muted-foreground bg-muted/10">
+              {tag}
+            </span>
+          ))}
+          {tags.length > 4 && (
+            <span class="text-xs text-muted-foreground">+{tags.length - 4}</span>
+          )}
+        </div>
+      )}
+    </div>
+  </article>
+</a>

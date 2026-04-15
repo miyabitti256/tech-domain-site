@@ -1,0 +1,13 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "tech-domain-site",
+	"compatibility_date": "2026-04-07",
+	"compatibility_flags": ["nodejs_compat"],
+	"assets": {
+		"directory": "dist"
+	},
+	"observability": {
+		"enabled": true
+	},
+	"workers_dev": false
+}

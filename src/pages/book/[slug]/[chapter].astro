@@ -1,0 +1,268 @@
+---
+import { getCollection, render } from "astro:content";
+import { BookOpen, RefreshCcw } from "@lucide/astro";
+import AuthorCard from "@/components/layouts/AuthorCard.astro";
+import PrevNextNav from "@/components/layouts/PrevNextNav.astro";
+import Prose from "@/components/markdown/Prose.astro";
+import TableOfContents from "@/components/markdown/TableOfContents.astro";
+import {
+	Breadcrumb,
+	BreadcrumbItem,
+	BreadcrumbLink,
+	BreadcrumbList,
+	BreadcrumbPage,
+	BreadcrumbSeparator,
+} from "@/components/starwind/breadcrumb";
+import type { BookMeta } from "@/contents/book/types";
+import Layout from "@/layouts/Layout.astro";
+import "@/styles/articledetail.css";
+
+export async function getStaticPaths() {
+	const allChapters = await getCollection("book");
+
+	const metaModules = import.meta.glob<{ default: BookMeta }>(
+		"/src/contents/book/*/meta.ts",
+		{ eager: true },
+	);
+
+	const paths: {
+		params: { slug: string; chapter: string };
+		props: {
+			entry: (typeof allChapters)[number];
+			meta: BookMeta;
+			bookSlug: string;
+			chapterSlug: string;
+			chapterIndex: number;
+			prevChapter: string | null;
+			nextChapter: string | null;
+			chapterTitles: Map<string, string>;
+		};
+	}[] = [];
+
+	for (const [filepath, mod] of Object.entries(metaModules)) {
+		const bookSlug = filepath.split("/").at(-2) ?? "";
+		const meta = mod.default;
+
+		const chapterTitles = new Map<string, string>();
+		for (const ch of meta.chapters) {
+			const entryId = `${bookSlug}/${ch}`;
+			const found = allChapters.find((e) => e.id === entryId);
+			if (found) {
+				chapterTitles.set(ch, found.data.title);
+			}
+		}
+
+		for (let i = 0; i < meta.chapters.length; i++) {
+			const chapterSlug = meta.chapters[i];
+			const entryId = `${bookSlug}/${chapterSlug}`;
+			const entry = allChapters.find((e) => e.id === entryId);
+
+			if (!entry) continue;
+
+			paths.push({
+				params: { slug: bookSlug, chapter: chapterSlug },
+				props: {
+					entry,
+					meta,
+					bookSlug,
+					chapterSlug,
+					chapterIndex: i,
+					prevChapter: i > 0 ? meta.chapters[i - 1] : null,
+					nextChapter:
+						i < meta.chapters.length - 1 ? meta.chapters[i + 1] : null,
+					chapterTitles,
+				},
+			});
+		}
+	}
+
+	return paths;
+}
+
+const {
+	entry,
+	meta,
+	bookSlug,
+	chapterSlug,
+	chapterIndex,
+	prevChapter,
+	nextChapter,
+	chapterTitles,
+} = Astro.props;
+const { Content, headings } = await render(entry);
+const { title } = entry.data;
+
+const publishedAt = new Date(meta.publishedAt);
+const updatedAt = meta.updatedAt ? new Date(meta.updatedAt) : null;
+
+const formattedDate = publishedAt.toLocaleDateString("ja-JP", {
+	year: "numeric",
+	month: "long",
+	day: "numeric",
+});
+
+const formattedUpdateDate = updatedAt
+	? updatedAt.toLocaleDateString("ja-JP", {
+			year: "numeric",
+			month: "long",
+			day: "numeric",
+		})
+	: null;
+
+const hasMermaid = entry.body?.includes("```mermaid");
+const isDev = import.meta.env.DEV;
+
+const prevTitle = prevChapter
+	? chapterTitles.get(prevChapter) || prevChapter
+	: null;
+const nextTitle = nextChapter
+	? chapterTitles.get(nextChapter) || nextChapter
+	: null;
+---
+
+<Layout 
+  title={`${title} | ${meta.title} | miyabittiのテックブログ`} 
+  description={meta.description}
+  ogImage={meta.coverImg || `/ogp/book/${bookSlug}.webp`}
+  ogType="article"
+>
+  <Fragment slot="head">
+    <script is:inline type="application/ld+json" set:html={JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "Article",
+      "headline": title,
+      "description": meta.description,
+      "datePublished": publishedAt.toISOString(),
+      "dateModified": updatedAt ? updatedAt.toISOString() : publishedAt.toISOString(),
+      "author": {
+        "@type": "Person",
+        "name": "miyabitti",
+        "url": "https://github.com/miyabitti256"
+      },
+      "publisher": {
+        "@type": "Organization",
+        "name": "tech.miyabitti",
+        "logo": {
+          "@type": "ImageObject",
+          "url": new URL("/avatar.webp", Astro.site).href
+        }
+      },
+      "mainEntityOfPage": {
+        "@type": "WebPage",
+        "@id": new URL(`/book/${bookSlug}/${chapterSlug}/`, Astro.site).href
+      }
+    })} />
+    <script is:inline type="application/ld+json" set:html={JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Home", "item": new URL("/", Astro.site).href },
+        { "@type": "ListItem", "position": 2, "name": "Books", "item": new URL("/book/", Astro.site).href },
+        { "@type": "ListItem", "position": 3, "name": meta.title, "item": new URL(`/book/${bookSlug}/`, Astro.site).href },
+        { "@type": "ListItem", "position": 4, "name": title }
+      ]
+    })} />
+  </Fragment>
+  {isDev && hasMermaid && (
+    <script type="module" is:inline>
+      import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+      mermaid.initialize({ startOnLoad: true, theme: 'base' });
+    </script>
+  )}
+
+  <main class="py-8">
+    <article class="px-6 mx-auto max-w-3xl">
+      <div class="mb-8">
+        <Breadcrumb>
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink href="/">Home</BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbLink href="/book">Book</BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbLink href={`/book/${bookSlug}`}>{meta.title}</BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage class="line-clamp-1">{title}</BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
+      </div>
+
+      <header class="mb-12">
+        <div class="flex flex-wrap items-center gap-x-4 gap-y-2 mb-6 text-sm text-muted-foreground">
+          <time datetime={publishedAt.toISOString()}>{formattedDate}</time>
+          {updatedAt && (
+            <div class="flex items-center gap-1.5 list-none">
+              <RefreshCcw class="w-4 h-4" />
+              <time datetime={updatedAt.toISOString()}>{formattedUpdateDate}</time>
+            </div>
+          )}
+          <span>&bull;</span>
+          <span class="font-mono text-xs">Chapter {chapterIndex + 1} / {meta.chapters.length}</span>
+        </div>
+
+        <h1 class="text-4xl md:text-5xl font-bold tracking-tight text-foreground mb-6 leading-[1.15]">
+          {title}
+        </h1>
+
+        {/* 章目次（折りたたみ） */}
+        <details class="custom-details border border-border rounded-xl bg-card/50 overflow-hidden">
+          <summary class="px-5 py-3.5 cursor-pointer font-bold select-none text-foreground flex items-center justify-between hover:bg-muted/50 transition-colors">
+            <div class="flex items-center gap-2">
+              <BookOpen class="w-5 h-5 text-muted-foreground" />
+              <span>{meta.title} の章目次</span>
+            </div>
+            <span class="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{meta.chapters.length} 章</span>
+          </summary>
+          <div class="px-5 pb-5 pt-2 border-t border-border/50">
+            <ol class="list-decimal list-inside space-y-2.5 text-sm text-muted-foreground">
+              {meta.chapters.map((ch) => (
+                <li>
+                  {ch === chapterSlug ? (
+                    <span class="font-bold text-primary cursor-default pl-1">
+                      {chapterTitles.get(ch) || ch}
+                    </span>
+                  ) : (
+                    <a href={`/book/${bookSlug}/${ch}`} class="hover:text-primary transition-colors hover:underline pl-1">
+                      {chapterTitles.get(ch) || ch}
+                    </a>
+                  )}
+                </li>
+              ))}
+            </ol>
+          </div>
+        </details>
+      </header>
+
+      {headings && headings.length > 0 && (
+        <TableOfContents headings={headings} />
+      )}
+
+      <Prose>
+        <Content />
+      </Prose>
+
+      <footer class="mt-12 border-t border-border">
+        <div class="py-8">
+          <AuthorCard />
+        </div>
+        <PrevNextNav
+          prev={prevChapter
+            ? { href: `/book/${bookSlug}/${prevChapter}`, label: "前の章", title: prevTitle || "" }
+            : { href: `/book/${bookSlug}`, label: "本のトップへ", title: meta.title }
+          }
+          next={nextChapter
+            ? { href: `/book/${bookSlug}/${nextChapter}`, label: "次の章", title: nextTitle || "" }
+            : { href: `/book/${bookSlug}`, label: "本のトップへ", title: meta.title }
+          }
+        />
+      </footer>
+    </article>
+  </main>
+</Layout>

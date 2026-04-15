@@ -1,0 +1,179 @@
+---
+interface Props {
+  slug: string;
+  url: string;
+  title: string;
+  description: string;
+  chaptersCount: number;
+  publishedAt: Date;
+  coverImg?: string;
+}
+
+const { slug, url, title, description, chaptersCount, publishedAt, coverImg } = Astro.props;
+---
+
+<a href={url} class="js-book-link group flex flex-col no-underline text-inherit h-full">
+  <div class="w-full flex justify-center mb-6 mt-4">
+    <div class="book-container relative w-[55%] max-w-[150px] aspect-[1/1.414]">
+      <div class="book relative w-full h-full">
+        <!-- 下側面 -->
+        <div class="book-back absolute inset-0 z-0 bg-white border border-border shadow-sm rounded-sm"></div>
+        
+        <!-- 表紙開いたときに見える最初のページ (右ページ) -->
+        <div class="book-first-page absolute inset-[1.5px] bg-white border border-black/10 dark:border-white/10 shadow-inner rounded-r-[1px]"></div>
+        
+        <!-- 背表紙 -->
+        <div class="book-spine absolute -z-1 top-0 left-0 h-full w-[24px] bg-card rounded-sm border border-border flex items-center justify-center shadow-[inset_-2px_0_4px_rgba(0,0,0,0.05)] dark:shadow-[inset_-2px_0_4px_rgba(0,0,0,0.4)]"></div>
+        
+        <!-- メインの表紙 -->
+        <div class="book-cover absolute inset-0">
+          <!-- 表紙の表面 -->
+          <div class="book-cover-front absolute inset-0 overflow-hidden bg-card border border-border rounded-[2px_4px_4px_2px] shadow-[inset_4px_0_10px_rgba(0,0,0,0.05)] dark:shadow-[inset_4px_0_10px_rgba(0,0,0,0.3)]">
+            {coverImg ? (
+              <img src={coverImg} alt={title} class="w-full h-full object-cover" loading="lazy" />
+            ) : (
+              <div class="w-full h-full flex items-end p-4 text-foreground font-bold bg-linear-to-br from-muted/50 to-muted text-sm leading-snug">
+                <span>{title}</span>
+              </div>
+            )}
+            <!-- 表紙の折れ目/ハイライト -->
+            <div class="absolute top-0 left-[6px] bottom-0 w-px bg-black/10 dark:bg-white/10 pointer-events-none"></div>
+            <div class="absolute top-0 left-[7px] bottom-0 w-1 bg-linear-to-r from-black/5 to-transparent dark:from-white/5 pointer-events-none"></div>
+          </div>
+          
+          <!-- 表紙の裏面 (左ページ) -->
+          <div class="book-cover-back absolute inset-0 bg-background border border-border rounded-[2px_4px_4px_2px]">
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="px-2 pt-2 grow flex flex-col">
+    <div class="flex items-center gap-3 text-xs text-muted-foreground mb-3">
+      <time datetime={publishedAt.toISOString()}>
+        {publishedAt.toLocaleDateString("ja-JP", { year: "numeric", month: "short", day: "numeric" })}
+      </time>
+      <span class="px-2 py-0.5 rounded bg-muted/80 border border-border font-mono font-medium text-[10px] text-muted-foreground">
+        {chaptersCount} Chapters
+      </span>
+    </div>
+    <h3 class="text-lg font-bold leading-snug text-foreground mb-2 line-clamp-2 transition-colors group-hover:text-foreground group-hover:underline decoration-foreground/20 underline-offset-4">
+      {title}
+    </h3>
+    <p class="text-sm leading-relaxed text-muted-foreground line-clamp-2 mt-auto">
+      {description}
+    </p>
+  </div>
+</a>
+
+<style>
+  .book-container {
+    perspective: 1500px;
+    transform-origin: center center;
+    will-change: transform;
+  }
+
+  .book {
+    transform-style: preserve-3d;
+    transform: rotateX(15deg);
+    transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  /* 本自体のドロップシャドウ */
+  :global(.dark) .book::before {
+    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.5);
+  }
+
+  /* 表紙のベース */
+  .book-cover {
+    transform-origin: left;
+    transform-style: preserve-3d;
+    transform: translateZ(12px);
+    transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .book-cover-front,
+  .book-cover-back {
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+  }
+
+  .book-cover-back {
+    transform: rotateY(180deg);
+  }
+
+  /* ホバー時: 表紙「だけ」を少し開く */
+  .group:hover .book-cover {
+    transform: translateZ(12px) rotateY(-20deg);
+  }
+
+  /* 表紙の開いた下に見える初めのページ - 奥行き感を出すためにわずかにスケールダウン */
+  .book-first-page {
+    transform: translateZ(11px) scale(0.99);
+  }
+
+  /* 背表紙: 左軸でヒンジとし、-90度回転させることで厚みを構築 */
+  .book-spine {
+    transform-origin: left;
+    transform: translateZ(12px) rotateY(75deg);
+  }
+
+  /* 背面 - 奥行き感を出すためにわずかにスケールダウン */
+  .book-back {
+    transform: translateZ(-12px) scale(0.98);
+  }
+
+</style>
+
+<script>
+  import { navigate } from 'astro:transitions/client';
+
+  document.addEventListener('astro:page-load', () => {
+    const links = document.querySelectorAll('.js-book-link');
+    
+    links.forEach(link => {
+      // 多重登録防止
+      if (link.hasAttribute('data-listener-attached')) return;
+      link.setAttribute('data-listener-attached', 'true');
+
+      link.addEventListener('click', (e) => {
+        if (e instanceof MouseEvent && (e.ctrlKey || e.metaKey || e.shiftKey || e.button !== 0)) {
+          return;
+        }
+
+        e.preventDefault();
+        
+        const url = link.getAttribute('href');
+        if (!url) return;
+
+        const container = link.querySelector('.book-container');
+        if (container) {
+          const rect = container.getBoundingClientRect();
+          // 遷移先でアニメーションを再生するために、元の座標とサイズを保存
+          sessionStorage.setItem('book-transition-rect', JSON.stringify({
+            left: rect.left,
+            top: rect.top,
+            width: rect.width,
+            height: rect.height
+          }));
+          
+          // View Transitionの標準のフェードを無効化するクラスを付与
+          document.documentElement.classList.add('disable-vt-fade');
+        }
+        
+        navigate(url);
+      });
+    });
+  });
+</script>
+
+<style is:global>
+  /* 本をクリックした遷移時のみ、ルートのクロスフェードを強制無効化してGSAPに任せる */
+  html.disable-vt-fade::view-transition-group(root),
+  html.disable-vt-fade::view-transition-old(root),
+  html.disable-vt-fade::view-transition-new(root) {
+    animation: none !important;
+    mix-blend-mode: normal !important;
+  }
+</style>

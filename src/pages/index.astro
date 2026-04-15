@@ -1,0 +1,81 @@
+---
+import { getCollection } from "astro:content";
+import ArticleCard from "@/components/common/ArticleCard.astro";
+import AboutMe from "@/components/page/index/AboutMe.astro";
+import Books from "@/components/page/index/Books.astro";
+import Hero from "@/components/page/index/Hero.astro";
+import LatestArticles from "@/components/page/index/LatestArticles.astro";
+import TagMarquee from "@/components/page/index/TagMarquee.astro";
+import ZennArticles from "@/components/page/index/ZennArticles.astro";
+import Layout from "@/layouts/Layout.astro";
+
+const allPosts = await getCollection("article");
+// 日付の降順でソート
+const sortedPosts = allPosts.sort(
+	(a, b) =>
+		new Date(b.data.publishedAt).getTime() -
+		new Date(a.data.publishedAt).getTime(),
+);
+
+// おすすめ記事は適当に抽出（最新3件を除く）
+const recommendedPosts = sortedPosts.slice(3, 6); // もし無ければ空になる
+---
+
+<Layout>
+  <Fragment slot="head">
+    <script type="application/ld+json" set:html={JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "miyabittiのテックブログ",
+      "url": "https://tech.miyabitti.com",
+      "description": "フロントエンド/TypeScriptをメインに発信するテックブログ",
+      "author": {
+        "@type": "Person",
+        "name": "miyabitti",
+        "url": "https://github.com/miyabitti256"
+      },
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": "https://tech.miyabitti.com/search?q={search_term_string}",
+        "query-input": "required name=search_term_string"
+      }
+    })} />
+  </Fragment>
+
+  {/* Hero Section */}
+  <Hero />
+
+  {/* Tag Marquee Section */}
+  <TagMarquee />
+
+  {/* Latest Articles Section */}
+  <LatestArticles />
+
+  {/* Books Section */}
+  <Books />
+
+  {/* Zenn Articles Section */}
+  <ZennArticles />
+
+  <div class="px-6 mx-auto max-w-6xl">
+    {/* Recommended Articles Section */}
+    {recommendedPosts.length > 0 && (
+      <section class="py-20">
+        <div class="mb-10">
+          <h2 class="text-3xl font-bold tracking-tight text-foreground">Recommended</h2>
+          <p class="mt-2 text-muted-foreground">読んでおきたいピックアップ記事</p>
+        </div>
+        
+        <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {recommendedPosts.map(post => (
+            <ArticleCard post={post} />
+          ))}
+        </div>
+      </section>
+    )}
+  </div>
+
+  {/* About Me Section */}
+  <AboutMe />
+</Layout>
+

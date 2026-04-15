@@ -1,0 +1,127 @@
+---
+import type { CollectionEntry } from "astro:content";
+import { getCollection } from "astro:content";
+import type { GetStaticPaths, Page } from "astro";
+import ArticleCard from "@/components/common/ArticleCard.astro";
+import {
+	Pagination,
+	PaginationContent,
+	PaginationEllipsis,
+	PaginationItem,
+	PaginationLink,
+	PaginationNext,
+	PaginationPrevious,
+} from "@/components/starwind/pagination";
+import Layout from "@/layouts/Layout.astro";
+
+export const getStaticPaths = (async ({ paginate }) => {
+	const allArticles = await getCollection("article");
+	const sortedArticles = allArticles.sort(
+		(a, b) =>
+			new Date(b.data.publishedAt).getTime() -
+			new Date(a.data.publishedAt).getTime(),
+	);
+	return paginate(sortedArticles, { pageSize: 9 });
+}) satisfies GetStaticPaths;
+
+const { page } = Astro.props as { page: Page<CollectionEntry<"article">> };
+const articles = page.data;
+
+// ページネーション用のページ番号配列を生成
+function getPageNumbers(
+	current: number,
+	total: number,
+): (number | "ellipsis")[] {
+	if (total <= 7) {
+		return Array.from({ length: total }, (_, i) => i + 1);
+	}
+
+	const pages: (number | "ellipsis")[] = [1];
+
+	if (current > 3) {
+		pages.push("ellipsis");
+	}
+
+	const start = Math.max(2, current - 1);
+	const end = Math.min(total - 1, current + 1);
+
+	for (let i = start; i <= end; i++) {
+		pages.push(i);
+	}
+
+	if (current < total - 2) {
+		pages.push("ellipsis");
+	}
+
+	pages.push(total);
+	return pages;
+}
+
+const pageNumbers = getPageNumbers(page.currentPage, page.lastPage);
+const basePath = "/article";
+const getPageUrl = (n: number) => (n === 1 ? basePath : `${basePath}/${n}`);
+---
+
+<Layout title={`Articles${page.currentPage > 1 ? ` - Page ${page.currentPage}` : ""} | miyabittiのテックブログ`}>
+  <main class="py-8">
+    <div class="px-6 mx-auto max-w-6xl">
+      <div class="mb-16">
+        <h1 class="text-4xl md:text-5xl font-bold tracking-tight text-foreground mb-4">Articles</h1>
+        <h2 class="text-lg text-muted-foreground max-w-2xl">
+          Webデザイン、フロントエンド開発、アニメーション、そして日々の気づきを記録しています。
+        </h2>
+      </div>
+
+      <div class="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+        {articles.map((article: any) => (
+          <ArticleCard post={article} />
+        ))}
+      </div>
+
+      {articles.length === 0 && (
+        <div class="py-20 text-center border border-dashed rounded-3xl border-border bg-muted/5">
+          <p class="text-muted-foreground">記事がまだありません。</p>
+        </div>
+      )}
+
+      {/* Pagination */}
+      {page.lastPage > 1 && (
+        <div class="mt-16">
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                {page.url.prev ? (
+                  <PaginationPrevious href={page.url.prev} />
+                ) : (
+                  <PaginationPrevious class="pointer-events-none opacity-50" />
+                )}
+              </PaginationItem>
+
+              {pageNumbers.map((p) =>
+                p === "ellipsis" ? (
+                  <PaginationItem>
+                    <PaginationEllipsis />
+                  </PaginationItem>
+                ) : (
+                  <PaginationItem>
+                    <PaginationLink href={getPageUrl(p)} isActive={p === page.currentPage}>
+                      {p}
+                    </PaginationLink>
+                  </PaginationItem>
+                )
+              )}
+
+              <PaginationItem>
+                {page.url.next ? (
+                  <PaginationNext href={page.url.next} />
+                ) : (
+                  <PaginationNext class="pointer-events-none opacity-50" />
+                )}
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+        </div>
+      )}
+    </div>
+  </main>
+</Layout>

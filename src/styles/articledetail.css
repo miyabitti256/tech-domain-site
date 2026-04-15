@@ -1,0 +1,423 @@
+/** biome-ignore-all lint/complexity/noImportantStyles: 記事詳細ページなのでimportantでok */
+/** biome-ignore-all lint/style/noDescendingSpecificity: 完全に独自性のあるものなのでok */
+@reference "@/styles/starwind.css";
+/* ── Details Animation (2026 Native) ─────────────────── */
+.custom-details::details-content {
+	opacity: 0;
+	block-size: 0;
+	overflow: clip;
+	transition:
+		block-size 400ms cubic-bezier(0.4, 0, 0.2, 1),
+		opacity 400ms cubic-bezier(0.4, 0, 0.2, 1),
+		content-visibility 400ms allow-discrete;
+}
+
+.custom-details[open]::details-content {
+	opacity: 1;
+	block-size: auto;
+}
+
+@supports not (interpolate-size: allow-keywords) {
+	.custom-details::details-content {
+		transition: opacity 0.3s ease;
+	}
+	.custom-details[open]::details-content {
+		block-size: auto;
+	}
+}
+
+.expressive-code {
+	margin-bottom: 2rem;
+}
+
+/* ブレークポイント: 60ch（Tailwindcss/Typographyのproseのmax-widthを参考に） */
+.remark-link-card-plus__container {
+	--padding-x: 1rem;
+	--padding-y: 0.7rem;
+	--border-radius: calc(0.5rem - 1px);
+	@apply rounded-[calc(var(--border-radius)+1px)];
+	@apply border border-(--tw-prose-hr);
+	@apply transition-colors hover:bg-gray-50 dark:hover:bg-gray-800;
+	@apply mb-5 w-full;
+}
+
+.remark-link-card-plus__card {
+	@apply grid grid-cols-[1fr_116px] gap-4;
+	@apply no-underline;
+
+	@media (min-width: 60ch) {
+		@apply grid-cols-[1fr_220px];
+	}
+}
+
+.remark-link-card-plus__main {
+	@apply flex flex-col justify-center font-normal;
+	@apply max-w-full min-w-full;
+	@apply col-1;
+	@apply py-(--padding-y) pr-0 pl-(--padding-x);
+	@apply rounded-tl-(--border-radius) rounded-bl-(--border-radius);
+}
+
+.remark-link-card-plus__title {
+	@apply text-base leading-5 font-bold;
+	@apply text-(--tw-prose-headings);
+	@apply line-clamp-2 text-ellipsis;
+}
+
+.remark-link-card-plus__description {
+	@apply text-xs text-gray-500 dark:text-gray-400;
+	@apply mt-1 mb-3;
+
+	@apply line-clamp-1 text-ellipsis;
+}
+
+.remark-link-card-plus__meta {
+	@apply flex items-center gap-2;
+}
+
+.remark-link-card-plus__favicon {
+	@apply m-0 mt-0.5;
+}
+
+.remark-link-card-plus__url {
+	@apply text-xs text-gray-600 dark:text-gray-300;
+	@apply line-clamp-1 text-ellipsis;
+}
+
+.remark-link-card-plus__thumbnail {
+	@apply col-2 aspect-square;
+
+	@media (min-width: 60ch) {
+		@apply aspect-[1.91/1];
+	}
+}
+
+.remark-link-card-plus__image {
+	@apply m-0 h-full w-full object-cover;
+	@apply rounded-tr-(--border-radius) rounded-br-(--border-radius);
+}
+
+/* Markdown Headers Autolink */
+.prose h2,
+.prose h3,
+.prose h4,
+.prose h5,
+.prose h6 {
+	@apply relative scroll-mt-20;
+}
+.heading-anchor {
+	@apply text-muted-foreground/40 absolute left-0 pr-1.5 font-normal no-underline opacity-0 transition-opacity;
+	transform: translateX(-100%);
+}
+.prose h2:hover .heading-anchor,
+.prose h3:hover .heading-anchor,
+.prose h4:hover .heading-anchor,
+.prose h5:hover .heading-anchor,
+.prose h6:hover .heading-anchor {
+	@apply opacity-100;
+}
+
+/* Footnotes Scroll Offset */
+.prose [id^="user-content-fn"] {
+	@apply scroll-mt-20;
+}
+
+/* External Links */
+.prose
+a[target="_blank"]:not(
+	.remark-link-card-plus__card,
+	.remark-link-card-plus__container,
+	.x-embed-outer *
+) {
+	@apply inline-flex items-baseline;
+}
+.prose
+	a[target="_blank"]:not(
+		.remark-link-card-plus__card,
+		.remark-link-card-plus__container,
+		.x-embed-outer *
+	)::after {
+	content: "↗";
+	@apply text-muted-foreground ml-0.5 font-sans text-[0.85em];
+}
+
+/* ── YouTube Lite Embed ───────────────────────────────── */
+.lite-youtube-wrap {
+	@apply border-border/50 mx-auto my-8 w-full max-w-3xl overflow-hidden rounded-xl border shadow-sm;
+}
+
+.lite-youtube {
+	position: relative;
+	aspect-ratio: 16 / 9;
+	cursor: pointer;
+	background: #000;
+	overflow: hidden;
+}
+
+.lite-youtube picture,
+.lite-youtube img {
+	margin: 0;
+}
+
+/* ホバー時に再生ボタンを赤くする */
+.lite-youtube:hover .lite-youtube-btn-bg {
+	background-color: #f00;
+}
+
+.lite-youtube-btn {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: transparent;
+	border: none;
+	cursor: pointer;
+	padding: 0;
+}
+
+.lite-youtube-btn-bg {
+	width: 68px;
+	height: 48px;
+	background-color: rgba(33, 33, 33, 0.85);
+	border-radius: 14px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	transition: background-color 0.2s ease;
+}
+
+/* ── X (Twitter) Static Card ─────────────────────────── */
+.x-embed-outer {
+	@apply my-8 flex w-full justify-center;
+}
+
+.x-embed-card {
+	width: 100%;
+	max-width: 550px;
+	border: 1px solid;
+	@apply border-border/60 bg-card text-card-foreground rounded-xl;
+	@apply font-sans transition-colors duration-200 hover:bg-gray-50 dark:hover:bg-gray-800;
+	overflow: hidden;
+}
+
+.x-embed-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 1rem 1rem 0.5rem;
+}
+
+.x-embed-author {
+	display: flex;
+	align-items: center;
+	gap: 0.65rem;
+	text-decoration: none;
+}
+
+.prose .x-embed-author::after {
+	content: none;
+}
+
+.x-embed-avatar-img {
+	width: 42px;
+	height: 42px;
+	border-radius: 50%;
+	object-fit: cover;
+	margin: 0;
+}
+
+.x-embed-author-info {
+	display: flex;
+	flex-direction: column;
+	line-height: 1.25;
+}
+
+.x-embed-name {
+	@apply text-foreground text-[15px] font-bold;
+	display: flex;
+	align-items: center;
+}
+
+.x-embed-handle {
+	@apply text-muted-foreground text-sm;
+}
+
+.x-embed-logo {
+	@apply text-foreground/70 hover:text-foreground transition-colors;
+	display: flex;
+	flex-shrink: 0;
+}
+
+.prose .x-embed-logo::after {
+	content: none !important;
+}
+
+.x-embed-body {
+	padding: 0.25rem 1rem 0.75rem;
+}
+
+.x-embed-text {
+	@apply text-foreground text-[15px] leading-[1.4];
+	margin: 0;
+	white-space: pre-wrap;
+	word-break: break-word;
+}
+
+.x-embed-link {
+	@apply text-[#1d9bf0] no-underline hover:underline;
+}
+
+.prose .x-embed-link::after {
+	content: none !important;
+}
+
+.x-embed-media-grid {
+	margin-top: 0.75rem;
+	display: grid;
+	gap: 2px;
+	border-radius: 12px;
+	overflow: hidden;
+	border: 1px solid;
+	@apply border-border/50;
+}
+
+.x-embed-media-1 {
+	grid-template-columns: 1fr;
+}
+.x-embed-media-2 {
+	grid-template-columns: 1fr 1fr;
+	aspect-ratio: 16 / 9;
+}
+.x-embed-media-3 {
+	grid-template-columns: 1fr 1fr;
+	grid-template-rows: 1fr 1fr;
+	aspect-ratio: 16 / 9;
+}
+.x-embed-media-3 .x-embed-media-item:first-child {
+	grid-row: 1 / span 2;
+}
+.x-embed-media-4 {
+	grid-template-columns: 1fr 1fr;
+	grid-template-rows: 1fr 1fr;
+	aspect-ratio: 16 / 9;
+}
+
+.x-embed-media-item {
+	position: relative;
+	display: block;
+	overflow: hidden;
+	margin: 0 !important;
+	text-decoration: none !important;
+}
+
+.prose .x-embed-media-item::after {
+	content: none !important;
+}
+
+.x-embed-media-item img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	margin: 0 !important;
+}
+
+.x-embed-video-icon {
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	background-color: rgba(0, 0, 0, 0.5);
+	border-radius: 50%;
+	width: 44px;
+	height: 44px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	backdrop-filter: blur(4px);
+}
+
+.x-embed-footer {
+	padding: 0 1rem 0.5rem;
+}
+
+.x-embed-date {
+	@apply text-muted-foreground text-[14px] hover:underline;
+	text-decoration: none;
+	display: inline-block;
+	margin-top: 0.25rem;
+}
+
+.prose .x-embed-date::after {
+	content: none !important;
+}
+
+.x-embed-stats {
+	display: flex;
+	align-items: center;
+	gap: 1.5rem;
+	margin-top: 0.75rem;
+	padding-top: 0.75rem;
+	@apply border-border/40 border-t;
+}
+
+.x-embed-stat-item {
+	display: flex;
+	align-items: center;
+	gap: 0.25rem;
+	@apply text-muted-foreground text-[13px] transition-colors;
+	text-decoration: none !important;
+	font-weight: 500;
+}
+
+.prose .x-embed-stat-item::after {
+	content: none !important;
+}
+
+.x-embed-stat-item:hover.reply {
+	color: #1d9bf0;
+}
+.x-embed-stat-item:hover.reply .x-embed-stat-icon {
+	background-color: rgba(29, 155, 240, 0.1);
+	color: #1d9bf0;
+}
+.x-embed-stat-item:hover.heart {
+	color: #f91880;
+}
+.x-embed-stat-item:hover.heart .x-embed-stat-icon {
+	background-color: rgba(249, 24, 128, 0.1);
+	color: #f91880;
+}
+.x-embed-stat-item:hover.share {
+	color: #1d9bf0;
+}
+.x-embed-stat-item:hover.share .x-embed-stat-icon {
+	background-color: rgba(29, 155, 240, 0.1);
+	color: #1d9bf0;
+}
+
+.x-embed-stat-icon {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 32px;
+	height: 32px;
+	border-radius: 50%;
+	transition: background-color 0.2s ease;
+	margin-left: -8px;
+}
+
+/* Fallback Link Card for Twitter */
+.twitter-fallback {
+	@apply border-border/60 bg-muted/5 my-8;
+}
+
+.twitter-fallback .remark-link-card-plus__title {
+	@apply text-foreground;
+}
+
+.twitter-fallback .remark-link-card-plus__description {
+	@apply text-muted-foreground;
+}

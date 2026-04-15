@@ -1,0 +1,48 @@
+---
+import { Image } from "astro:assets";
+import { Share2 } from "@lucide/astro";
+import { Button } from "@/components/starwind/button";
+---
+
+<div class="flex flex-col sm:flex-row items-center justify-between gap-6 p-6">
+  <div class="flex items-center gap-4">
+    <Image src={"/avatar.webp"} alt="miyabitti" width={48} height={48} class="w-12 h-12 rounded-full object-cover border border-border shadow-sm" />
+    <div>
+      <p class="text-sm font-bold text-foreground">miyabitti</p>
+      <p class="text-xs text-muted-foreground">フロントエンドについて勉強中のニート</p>
+    </div>
+  </div>
+  <div class="flex justify-end gap-4 w-full sm:w-auto">
+    <Button variant="outline" id="share-btn">
+      <Share2 class="mr-2 h-4 w-4" />
+      ページを共有
+    </Button>
+  </div>
+</div>
+
+<script>
+  function initShareBtn() {
+    const shareBtn = document.getElementById('share-btn');
+    if (shareBtn && !shareBtn.hasAttribute('data-share-init')) {
+      shareBtn.setAttribute('data-share-init', 'true');
+      shareBtn.addEventListener('click', async () => {
+        if (navigator.share) {
+          try {
+            await navigator.share({
+              title: document.title,
+              url: window.location.href
+            });
+          } catch (err: any) {
+            if (err.name !== 'AbortError') {
+              console.error('Error sharing:', err);
+            }
+          }
+        } else {
+          alert('共有機能はこのブラウザでサポートされていません');
+        }
+      });
+    }
+  }
+
+  document.addEventListener('astro:page-load', initShareBtn);
+</script>

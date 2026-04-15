@@ -1,0 +1,99 @@
+---
+import { Rss } from "@lucide/astro";
+import Github from "simple-icons-astro/github";
+import X from "simple-icons-astro/X";
+import Zenn from "simple-icons-astro/Zenn";
+
+const currentYear = new Date().getFullYear();
+
+const navLinks = [
+	{ href: "/article", label: "Articles" },
+	{ href: "/book", label: "Books" },
+	{ href: "/#about", label: "About" },
+	{ href: "/search", label: "Search" },
+];
+
+const socialLinks = [
+	{
+		name: "GitHub",
+		href: "https://github.com/miyabitti256",
+		icon: Github,
+		color: "hover:text-[#181717] dark:hover:text-white",
+	},
+	{
+		name: "X",
+		href: "https://x.com/miyabitti0256",
+		icon: X,
+		color: "hover:text-foreground",
+	},
+	{
+		name: "Zenn",
+		href: "https://zenn.dev/miyabitti",
+		icon: Zenn,
+		color: "hover:text-[#3ea8ff]",
+	},
+	{
+		name: "RSS",
+		href: "/rss.xml",
+		icon: Rss,
+		color: "hover:text-[#ee802f]",
+	},
+];
+---
+
+<footer class="py-16 mt-24 border-t border-border bg-muted/5">
+  <div class="px-6 mx-auto max-w-6xl">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-12 mb-12">
+      
+      {/* Brand Column */}
+      <div class="space-y-4">
+        <a href="/" class="text-xl font-mono font-bold tracking-tight text-foreground transition-opacity hover:opacity-80">
+          tech.miyabitti
+        </a>
+        <p class="text-sm text-muted-foreground leading-relaxed max-w-xs">
+          Webデザインとフロントエンド開発のプロセスを記録するブログです。
+        </p>
+      </div>
+
+      {/* Navigation Column */}
+      <div class="space-y-4">
+        <h3 class="text-sm font-semibold text-foreground uppercase tracking-wider">Navigation</h3>
+        <nav class="flex flex-col gap-2">
+          {navLinks.map(link => (
+            <a href={link.href} class="text-sm text-muted-foreground hover:text-foreground transition-colors w-fit">
+              {link.label}
+            </a>
+          ))}
+        </nav>
+      </div>
+
+      {/* Social Column */}
+      <div class="space-y-4">
+        <h3 class="text-sm font-semibold text-foreground uppercase tracking-wider">Social</h3>
+        <div class="flex items-center gap-4">
+          {socialLinks.map(social => (
+            <a 
+              href={social.href} 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              class={`text-muted-foreground transition-all duration-300 hover:scale-110 ${social.color}`}
+              aria-label={social.name}
+            >
+              <social.icon class="w-5 h-5" />
+            </a>
+          ))}
+        </div>
+      </div>
+
+    </div>
+
+    <div class="pt-8 border-t border-border flex flex-col md:flex-row items-center justify-between gap-4">
+      <p class="text-sm text-muted-foreground">
+        &copy; {currentYear} miyabitti.
+      </p>
+      <div class="flex items-center gap-6 text-xs text-muted-foreground">
+        <a href="/privacy" class="hover:text-foreground transition-colors">Privacy Policy</a>
+      </div>
+    </div>
+  </div>
+</footer>

@@ -1,0 +1,232 @@
+@import "tailwindcss";
+@import "remark-github-alerts/styles/github-base.css";
+@import "remark-github-alerts/styles/github-colors-light.css";
+@import "remark-github-alerts/styles/github-colors-dark-class.css";
+@plugin "@tailwindcss/typography";
+@reference "./starwind.css";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+	--color-background: var(--background);
+	--color-foreground: var(--foreground);
+	--color-muted: var(--muted);
+	--color-muted-foreground: var(--muted-foreground);
+	--color-border: var(--border);
+
+	--font-sans:
+		"Zen Kaku Gothic New", ui-sans-serif, system-ui, sans-serif,
+		"Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+	--font-mono: "Lilex", monospace;
+}
+
+@utility pause {
+	animation-play-state: paused;
+}
+
+@layer base {
+	:root {
+		--background: #ffffff;
+		--foreground: #09090b;
+		--muted: #f4f4f5;
+		--muted-foreground: #71717a;
+		--border: #e4e4e7;
+		--primary: #09090b; /* Zinc 950 (Black/Deep Gray) */
+		--primary-foreground: #ffffff;
+		--primary-accent: #27272a; /* Zinc 800 */
+	}
+
+	.dark {
+		--background: #09090b;
+		--foreground: #fafafa;
+		--muted: #27272a;
+		--muted-foreground: #a1a1aa;
+		--border: #27272a;
+		--primary: #f4f4f5; /* Zinc 100 (Light Gray) */
+		--primary-foreground: #09090b; /* Zinc 950 */
+		--primary-accent: #e4e4e7; /* Zinc 200 */
+	}
+
+	* {
+		border-color: var(--border);
+	}
+
+	html,
+	body {
+		background-color: var(--background);
+		color: var(--foreground);
+		overflow-x: hidden;
+		width: 100%;
+		position: relative;
+		/* View Transitions と干渉するため transition-colors は削除または VT 非対応時のみ適用します */
+	}
+
+	/* Markdown コンテンツ内のコードフォントを強制上書き（ハイライトの色には干渉しません） */
+	.prose :where(code),
+	.prose :where(pre) {
+		font-family: var(--font-mono);
+	}
+}
+
+/* テーマ切替中はあらゆるもたつきを無くすため、一時的にトランジションを封じる */
+html.is-theme-toggling,
+html.is-theme-toggling * {
+	/* biome-ignore lint/complexity/noImportantStyles: アニメーション抑制のため */
+	transition: none !important;
+}
+
+/* --- View Transition 制御 --- */
+
+/* 1. ページ遷移時（Astro主導）のクロスフェードアニメーション */
+html[data-astro-transition]::view-transition-old(root) {
+	animation: fade-out 0.2s ease-out both;
+}
+html[data-astro-transition]::view-transition-new(root) {
+	animation: fade-in 0.2s ease-in both;
+}
+
+@keyframes fade-out {
+	from {
+		opacity: 1;
+	}
+	to {
+		opacity: 0;
+	}
+}
+@keyframes fade-in {
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
+}
+
+/* 丸みを帯びた幕開き・幕閉じ用DOMのスタイル設定 */
+.theme-curtain {
+	margin: 0;
+	padding: 0;
+	border: none;
+	background: transparent;
+	overflow: visible;
+	max-width: none;
+	max-height: none;
+	position: fixed;
+	top: 50%;
+	left: 50%;
+	width: 141%;
+	height: 141%;
+	transform: translate(-50%, -50%);
+	z-index: 100;
+	pointer-events: none;
+	visibility: hidden;
+}
+
+.theme-curtain::backdrop {
+	background: transparent;
+}
+
+.theme-curtain::before,
+.theme-curtain::after {
+	content: "";
+	display: block;
+	position: absolute;
+	top: 0;
+	width: 50%;
+	height: 100%;
+	background-color: var(
+		--curtain-color,
+		#09090b
+	); /* スクリプト側から注入される「元のテーマの背景色」を使用 */
+}
+
+.theme-curtain::before {
+	left: 0;
+	width: 50.5%;
+}
+.theme-curtain::after {
+	right: 0;
+	width: 50.5%;
+}
+
+/* === 閉じるアニメーション (is-closing) === */
+.theme-curtain.is-closing {
+	visibility: visible;
+}
+.theme-curtain.is-closing::before {
+	animation: anim-slide-in-left 0.5s ease-out forwards;
+}
+.theme-curtain.is-closing::after {
+	animation: anim-slide-in-right 0.5s ease-out forwards;
+}
+
+/* === 開くアニメーション (is-opening) - 参考サイトの丸みを再現 === */
+.theme-curtain.is-opening {
+	visibility: visible;
+}
+.theme-curtain.is-opening::before {
+	animation:
+		anim-corner-right 0.45s ease-out both,
+		anim-slide-out-left 0.8s ease-in-out 0.1s forwards;
+}
+.theme-curtain.is-opening::after {
+	animation:
+		anim-corner-left 0.45s ease-out both,
+		anim-slide-out-right 0.8s ease-in-out 0.1s forwards;
+}
+
+/* --- Keyframes --- */
+@keyframes anim-slide-in-left {
+	from {
+		transform: translateX(-101%);
+		border-bottom-right-radius: 100%;
+	}
+	to {
+		transform: translateX(0);
+		border-bottom-right-radius: 0%;
+	}
+}
+@keyframes anim-slide-in-right {
+	from {
+		transform: translateX(101%);
+		border-bottom-left-radius: 100%;
+	}
+	to {
+		transform: translateX(0);
+		border-bottom-left-radius: 0%;
+	}
+}
+
+@keyframes anim-slide-out-left {
+	from {
+		transform: translateX(0);
+	}
+	to {
+		transform: translateX(-101%);
+	}
+}
+@keyframes anim-slide-out-right {
+	from {
+		transform: translateX(0);
+	}
+	to {
+		transform: translateX(101%);
+	}
+}
+
+@keyframes anim-corner-right {
+	from {
+		border-bottom-right-radius: 0%;
+	}
+	to {
+		border-bottom-right-radius: 100%;
+	}
+}
+@keyframes anim-corner-left {
+	from {
+		border-bottom-left-radius: 0%;
+	}
+	to {
+		border-bottom-left-radius: 100%;
+	}
+}

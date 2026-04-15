@@ -1,0 +1,28 @@
+---
+import { ArrowLeft, House } from "@lucide/astro";
+import { Button } from "@/components/starwind/button";
+import Layout from "@/layouts/Layout.astro";
+---
+
+<Layout title="ページが見つかりません | miyabittiのテックブログ" description="お探しのページは見つかりませんでした。">
+  <section class="flex flex-col items-center justify-center min-h-[60vh] px-6 text-center">
+    <p class="text-8xl font-extrabold text-muted-foreground/20 select-none mb-4 font-mono">404</p>
+    <h1 class="text-3xl md:text-4xl font-bold tracking-tight text-foreground mb-4">
+      ページが見つかりません
+    </h1>
+    <p class="text-lg text-muted-foreground max-w-md mb-10 leading-relaxed">
+      お探しのページは移動または削除された可能性があります。<br />
+      URLが正しいかご確認ください。
+    </p>
+    <div class="flex items-center gap-4">
+      <Button href="/" size="lg" class="rounded-full">
+        <House class="w-4 h-4" />
+        トップへ戻る
+      </Button>
+      <Button href="/article" variant="outline" size="lg" class="rounded-full">
+        <ArrowLeft class="w-4 h-4" />
+        記事一覧へ
+      </Button>
+    </div>
+  </section>
+</Layout>
