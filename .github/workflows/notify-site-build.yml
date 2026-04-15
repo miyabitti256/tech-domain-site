@@ -14,8 +14,8 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.PORTFOLIO_TRIGGER_TOKEN }}
         run: |
+          echo '{"event_type":"rebuild-site","client_payload":{"source":"tech-blog"}}' | \
           gh api \
             --method POST \
             /repos/miyabitti256/root-domain-site/dispatches \
-            -f event_type="rebuild-site" \
-            -F client_payload='{"source":"tech-blog"}'
+            --input -
