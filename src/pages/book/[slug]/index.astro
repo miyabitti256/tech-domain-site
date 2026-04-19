@@ -1,4 +1,5 @@
 ---
+import { getCollection } from "astro:content";
 import { BookOpen, ChevronLeft, ChevronRight, RefreshCcw } from "@lucide/astro";
 import AuthorCard from "@/components/layouts/AuthorCard.astro";
 import Badge from "@/components/starwind/badge/Badge.astro";
@@ -13,22 +14,35 @@ import {
 import type { BookMeta } from "@/contents/book/types";
 import Layout from "@/layouts/Layout.astro";
 
-export function getStaticPaths() {
+export async function getStaticPaths() {
 	const metas = import.meta.glob<{ default: BookMeta }>(
 		"/src/contents/book/*/meta.ts",
 		{ eager: true },
 	);
 
+	const allChapters = await getCollection("book");
+
 	return Object.entries(metas).map(([filepath, mod]) => {
 		const slug = filepath.split("/").at(-2) ?? "";
+		const meta = mod.default;
+
+		const chapterTitles = new Map<string, string>();
+		for (const ch of meta.chapters) {
+			const entryId = `${slug}/${ch}`;
+			const found = allChapters.find((e) => e.id === entryId);
+			if (found) {
+				chapterTitles.set(ch, found.data.title);
+			}
+		}
+
 		return {
 			params: { slug },
-			props: { meta: mod.default, slug },
+			props: { meta, slug, chapterTitles },
 		};
 	});
 }
 
-const { meta, slug } = Astro.props;
+const { meta, slug, chapterTitles } = Astro.props;
 
 const publishedAt = new Date(meta.publishedAt);
 const updatedAt = meta.updatedAt ? new Date(meta.updatedAt) : null;
@@ -205,7 +219,7 @@ const formattedUpdateDate = updatedAt
                         {i + 1}
                       </span>
                       <span class="font-medium text-foreground group-hover:text-primary transition-colors grow">
-                        {ch}
+                        {chapterTitles.get(ch) || ch}
                       </span>
                       <ChevronRight class="w-5 h-5 text-muted-foreground/30 group-hover:text-primary transition-colors" />
                     </a>

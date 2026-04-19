@@ -7,7 +7,10 @@ const allZennArticles = await getCollection("zenn");
 
 // pubDate の降順でソートして最新3件を表示
 const articles = allZennArticles
-	.sort((a, b) => new Date(b.data.pubDate).getTime() - new Date(a.data.pubDate).getTime())
+	.sort(
+		(a, b) =>
+			new Date(b.data.pubDate).getTime() - new Date(a.data.pubDate).getTime(),
+	)
 	.slice(0, 3);
 
 const error = articles.length === 0;
