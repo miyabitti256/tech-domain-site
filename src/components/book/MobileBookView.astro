@@ -1,0 +1,605 @@
+---
+import { BookOpen, Check, RefreshCcw, Sparkles } from "@lucide/astro";
+import AuthorCard from "@/components/layouts/AuthorCard.astro";
+import Badge from "@/components/starwind/badge/Badge.astro";
+import {
+	Breadcrumb,
+	BreadcrumbItem,
+	BreadcrumbLink,
+	BreadcrumbList,
+	BreadcrumbPage,
+	BreadcrumbSeparator,
+} from "@/components/starwind/breadcrumb";
+import type { BookMeta } from "@/contents/book/types";
+import BookPageContent from "./BookPageContent.astro";
+
+interface Props {
+	meta: BookMeta;
+	slug: string;
+	chapterList: { slug: string; title: string; index: number }[];
+	spreads: Array<{
+		spreadIndex: number;
+		leftPage:
+			| { isBookInfo: true }
+			| {
+					chapters: { slug: string; title: string; index: number }[];
+					hasAuthorCard: boolean;
+			  };
+		rightPage: {
+			chapters: { slug: string; title: string; index: number }[];
+			hasAuthorCard: boolean;
+		};
+	}>;
+	formattedDate: string;
+	formattedUpdateDate: string | null;
+	publishedAt: Date;
+	updatedAt: Date | null;
+}
+
+const {
+	meta,
+	slug,
+	chapterList,
+	spreads,
+	formattedDate,
+	formattedUpdateDate,
+	publishedAt,
+	updatedAt,
+} = Astro.props;
+
+// モバイル用に「1ページ単位」のフラットな配列を構築
+type MobilePage =
+	| { type: "info" }
+	| {
+			type: "chapters";
+			pageNumber: number;
+			chapters: typeof chapterList;
+			hasAuthorCard: boolean;
+			showTocHeader: boolean;
+	  };
+
+const mobilePages: MobilePage[] = [];
+
+spreads.forEach((spread, sIndex) => {
+	if ("isBookInfo" in spread.leftPage) {
+		mobilePages.push({ type: "info" });
+	} else if (
+		spread.leftPage.chapters.length > 0 ||
+		spread.leftPage.hasAuthorCard
+	) {
+		mobilePages.push({
+			type: "chapters",
+			pageNumber: mobilePages.length + 1,
+			chapters: spread.leftPage.chapters,
+			hasAuthorCard: spread.leftPage.hasAuthorCard,
+			showTocHeader: false,
+		});
+	}
+
+	if (spread.rightPage.chapters.length > 0 || spread.rightPage.hasAuthorCard) {
+		mobilePages.push({
+			type: "chapters",
+			pageNumber: mobilePages.length + 1,
+			chapters: spread.rightPage.chapters,
+			hasAuthorCard: spread.rightPage.hasAuthorCard,
+			showTocHeader: sIndex === 0,
+		});
+	}
+});
+
+const totalMobilePages = mobilePages.length;
+---
+
+<div class="mobile-book-view block md:hidden w-full relative touch-pan-y">
+  <div class="w-full mx-auto mb-4 px-4 flex items-center justify-end">
+    {totalMobilePages > 1 && (
+      <div class="flex items-center gap-2 bg-background/90 backdrop-blur border border-border px-3 py-1 rounded-full text-xs font-mono font-medium text-muted-foreground shadow-xs">
+        <span>Page <span id="js-mobile-page-current">1</span> / {totalMobilePages}</span>
+      </div>
+    )}
+  </div>
+
+  <div class="book-viewport-mobile w-full mx-auto perspective-[1500px] z-0 pb-12">
+    <div
+      id="mobile-anim-container"
+      class="relative w-full"
+      style="transform-style: preserve-3d;"
+    >
+      <div 
+        id="mobile-book-wrapper"
+        class="flex w-full h-[640px] bg-card shadow-2xl overflow-hidden rounded-md border border-border relative"
+        style="transform-style: preserve-3d;"
+      >
+        {/* ----------------- 1. ベース表示レイヤー (常に1ページ分だけ表示・横スクロール完全撤去) ----------------- */}
+        <div id="js-mobile-base-view" class="w-full h-full relative z-0 bg-[#fafafa] dark:bg-[#1a1a1a] overflow-hidden">
+          <div class="js-base-content-mobile w-full h-full relative"></div>
+        </div>
+
+        {/* ----------------- 2. めくり角 (Page Corner) UI ----------------- */}
+        {totalMobilePages > 1 && (
+          <>
+            <button
+              id="js-mobile-corner-prev"
+              class="page-corner page-corner-prev absolute left-0 bottom-0 z-30 w-14 h-14 group cursor-pointer transition-all duration-300 opacity-0 pointer-events-none select-none"
+              type="button"
+              aria-label="前のページへ"
+            >
+              <div class="corner-fold-prev absolute left-0 bottom-0 w-full h-full transition-transform duration-300 group-hover:scale-125 origin-bottom-left">
+                <div class="w-full h-full bg-linear-to-tr from-black/20 via-black/5 to-transparent dark:from-white/20 dark:via-white/5 border-t border-r border-border/40 rounded-tr-md shadow-md"></div>
+              </div>
+              <span class="absolute left-1.5 bottom-1.5 text-[9px] font-mono font-bold text-muted-foreground group-hover:text-foreground transition-colors z-10">◀ PREV</span>
+            </button>
+
+            <button
+              id="js-mobile-corner-next"
+              class="page-corner page-corner-next absolute right-0 bottom-0 z-30 w-14 h-14 group cursor-pointer transition-all duration-300 opacity-0 pointer-events-none select-none"
+              type="button"
+              aria-label="次のページへ"
+            >
+              <div class="corner-fold-next absolute right-0 bottom-0 w-full h-full transition-transform duration-300 group-hover:scale-125 origin-bottom-right">
+                <div class="w-full h-full bg-linear-to-tl from-black/20 via-black/5 to-transparent dark:from-white/20 dark:via-white/5 border-t border-l border-border/40 rounded-tl-md shadow-md"></div>
+              </div>
+              <span class="absolute right-1.5 bottom-1.5 text-[9px] font-mono font-bold text-muted-foreground group-hover:text-foreground transition-colors z-10">NEXT ▶</span>
+            </button>
+          </>
+        )}
+
+        {/* ----------------- 3. 物理的3D紙めくりレイヤー (フェードなし) ----------------- */}
+        <div 
+          id="js-mobile-flip-layer"
+          class="absolute top-0 bottom-0 w-full z-40 pointer-events-none"
+          style="display: none; transform-style: preserve-3d;"
+        >
+          <div 
+            id="js-mobile-flip-card"
+            class="w-full h-full relative"
+            style="transform-style: preserve-3d;"
+          >
+            <div 
+              id="js-mobile-flip-front"
+              class="absolute inset-0 bg-[#fafafa] dark:bg-[#1a1a1a] border border-border/50 overflow-hidden shadow-2xl"
+              style="backface-visibility: hidden;"
+            >
+              <div class="js-flip-content-front-mobile w-full h-full relative"></div>
+            </div>
+            <div 
+              id="js-mobile-flip-back"
+              class="absolute inset-0 bg-[#fafafa] dark:bg-[#1a1a1a] border border-border/50 overflow-hidden shadow-2xl"
+              style="backface-visibility: hidden; transform: rotateY(180deg);"
+            >
+              <div class="js-flip-content-back-mobile w-full h-full relative"></div>
+            </div>
+          </div>
+        </div>
+
+        {/* ----------------- X. オープニングアニメーション用 表紙レイヤー ----------------- */}
+        <div 
+          id="js-mobile-cover-anim"
+          class="absolute inset-0 w-full z-50 pointer-events-none"
+          style="display: none; transform-style: preserve-3d;"
+        >
+          <div 
+            id="js-mobile-cover-card"
+            class="w-full h-full relative"
+            style="transform-style: preserve-3d; transform-origin: left center;"
+          >
+            {/* 表紙 (Front) - BookCardと全く同じデザイン */}
+            <div class="absolute inset-0 overflow-hidden bg-card border border-border shadow-[inset_4px_0_10px_rgba(0,0,0,0.05)] dark:shadow-[inset_4px_0_10px_rgba(0,0,0,0.3)] rounded-md" style="backface-visibility: hidden;">
+              {meta.coverImg ? (
+                <img src={meta.coverImg} alt={meta.title} class="w-full h-full object-cover" loading="lazy" />
+              ) : (
+                <div class="w-full h-full flex items-end p-6 text-foreground font-bold bg-linear-to-br from-muted/50 to-muted text-xl leading-snug">
+                  <span>{meta.title}</span>
+                </div>
+              )}
+              {/* シャドウ/ハイライト装飾 */}
+              <div class="absolute top-0 left-[6px] bottom-0 w-px bg-black/10 dark:bg-white/10 pointer-events-none"></div>
+              <div class="absolute top-0 left-[7px] bottom-0 w-1 bg-linear-to-r from-black/5 to-transparent dark:from-white/5 pointer-events-none"></div>
+            </div>
+            {/* 表紙裏 (Back) */}
+            <div class="absolute inset-0 bg-background border border-border rounded-md overflow-hidden" style="backface-visibility: hidden; transform: rotateY(180deg);">
+            </div>
+          </div>
+        </div>
+
+        {/* スワイプ案内 */}
+        <div
+          id="js-mobile-swipe-guide"
+          class="absolute top-4 left-1/2 -translate-x-1/2 z-50 bg-foreground/90 text-background px-4 py-2 rounded-full text-xs font-medium shadow-xl flex items-center gap-2 transition-all duration-500 opacity-0 pointer-events-none"
+        >
+          <span class="animate-bounce">👈</span>
+          <span>スワイプでページ移動</span>
+          <span class="animate-bounce">👉</span>
+        </div>
+      </div>
+
+      {/* ドットインジケータ */}
+      {totalMobilePages > 1 && (
+        <div class="absolute -bottom-10 left-1/2 -translate-x-1/2 flex items-center gap-2 z-20 bg-background/90 backdrop-blur px-3 py-1.5 rounded-full border border-border shadow-xs">
+          {mobilePages.map((_, i) => (
+            <button 
+              class={`js-mobile-dot w-2.5 h-2.5 rounded-full transition-all ${i === 0 ? 'bg-primary scale-110' : 'bg-muted-foreground/30'}`}
+              data-target-page={i}
+              aria-label={`Page ${i + 1}`}
+            ></button>
+          ))}
+        </div>
+      )}
+    </div>
+  </div>
+
+  {/* ----------------- 4. データソース (非表示の全ページHTML) ----------------- */}
+  <div id="js-mobile-data-source" class="hidden" aria-hidden="true">
+    {mobilePages.map((page, pIndex) => (
+      <div data-mobile-data-index={pIndex}>
+        <div class="h-full">
+          {page.type === "info" ? (
+            <BookPageContent 
+              type="info"
+              meta={meta}
+              slug={slug}
+              totalChapters={chapterList.length}
+              formattedDate={formattedDate}
+              formattedUpdateDate={formattedUpdateDate}
+              publishedAt={publishedAt}
+              updatedAt={updatedAt}
+              isMobile={true}
+            />
+          ) : (
+            <BookPageContent 
+              type={page.showTocHeader ? "toc" : "chapters"}
+              meta={meta}
+              slug={slug}
+              chapters={page.chapters}
+              hasAuthorCard={page.hasAuthorCard}
+              isMobile={true}
+            />
+          )}
+        </div>
+      </div>
+    ))}
+  </div>
+</div>
+
+<style>
+  .hide-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .corner-fold-next {
+    clip-path: polygon(100% 0, 100% 100%, 0 100%);
+  }
+  .corner-fold-prev {
+    clip-path: polygon(0 0, 100% 100%, 0 100%);
+  }
+</style>
+
+<script>
+  import gsap from 'gsap';
+  import { getReadChapters, getBookProgress } from '@/utils/bookProgress';
+
+  let currentMobilePageIndex = 0;
+  let isMobileFlipping = false;
+  let totalMobilePages = 0;
+
+  function initMobileProgressUI() {
+    const main = document.querySelector('main[data-book-slug]');
+    if (!main) return;
+
+    const bookSlug = main.getAttribute('data-book-slug');
+    const totalCountStr = main.getAttribute('data-total-chapters');
+    if (!bookSlug || !totalCountStr) return;
+
+    const total = parseInt(totalCountStr, 10);
+    const readChapters = getReadChapters(bookSlug);
+    const { readCount, percentage } = getBookProgress(bookSlug, total);
+
+    const progressTexts = document.querySelectorAll('.js-mobile-progress-text');
+    const progressBars = document.querySelectorAll('.js-mobile-progress-bar');
+
+    progressTexts.forEach(el => { el.textContent = `${readCount} / ${total} 章 (${percentage}%)`; });
+    progressBars.forEach(el => { (el as HTMLElement).style.width = `${percentage}%`; });
+
+    const chapterItems = document.querySelectorAll('.mobile-book-view [data-chapter-item-slug]');
+    chapterItems.forEach((item) => {
+      const chSlug = item.getAttribute('data-chapter-item-slug');
+      if (!chSlug) return;
+      const isRead = readChapters.includes(chSlug);
+      const icon = item.querySelector('.js-ch-read-icon');
+      const badge = item.querySelector('.js-ch-badge');
+      if (isRead) {
+        if (icon) icon.classList.remove('hidden');
+        if (badge) badge.classList.add('bg-primary/20', 'text-primary', 'font-bold');
+      } else {
+        if (icon) icon.classList.add('hidden');
+        if (badge) badge.classList.remove('bg-primary/20', 'text-primary', 'font-bold');
+      }
+    });
+  }
+
+  function setupMobileBookNavigation() {
+    const dataSource = document.getElementById('js-mobile-data-source');
+    if (!dataSource) return;
+
+    const pageDataNodes = Array.from(dataSource.querySelectorAll('[data-mobile-data-index]'));
+    totalMobilePages = pageDataNodes.length;
+
+    const baseView = document.querySelector('.js-base-content-mobile');
+    const flipLayer = document.getElementById('js-mobile-flip-layer');
+    const flipCard = document.getElementById('js-mobile-flip-card');
+    const flipFront = document.querySelector('.js-flip-content-front-mobile');
+    const flipBack = document.querySelector('.js-flip-content-back-mobile');
+    
+    const cornerPrev = document.getElementById('js-mobile-corner-prev');
+    const cornerNext = document.getElementById('js-mobile-corner-next');
+    const currentIndicator = document.getElementById('js-mobile-page-current');
+    const mobileDots = document.querySelectorAll('.mobile-book-view .js-mobile-dot');
+    const swipeGuide = document.getElementById('js-mobile-swipe-guide');
+
+    const getPageHTML = (index: number) => {
+      const node = pageDataNodes.find(n => parseInt(n.getAttribute('data-mobile-data-index') || '-1') === index);
+      return node ? node.innerHTML : '';
+    };
+
+    // 初期描画
+    if (baseView) {
+      baseView.innerHTML = getPageHTML(0);
+    }
+
+    if (totalMobilePages <= 1) return; // ページが1ページ以下の場合はナビゲーション処理をスキップ
+
+    const updateNavUI = (index: number) => {
+      currentMobilePageIndex = index;
+      if (currentIndicator) currentIndicator.textContent = String(index + 1);
+
+      if (cornerPrev && cornerNext) {
+        if (index === 0) {
+          cornerPrev.classList.add('opacity-0', 'pointer-events-none');
+          cornerNext.classList.add('opacity-0', 'pointer-events-none');
+        } else if (index % 2 === 0) {
+          cornerPrev.classList.remove('opacity-0', 'pointer-events-none');
+          cornerNext.classList.add('opacity-0', 'pointer-events-none');
+        } else {
+          cornerPrev.classList.add('opacity-0', 'pointer-events-none');
+          if (index === totalMobilePages - 1) {
+            cornerNext.classList.add('opacity-0', 'pointer-events-none');
+          } else {
+            cornerNext.classList.remove('opacity-0', 'pointer-events-none');
+          }
+        }
+      }
+
+      mobileDots.forEach((dot, idx) => {
+        if (idx === index) {
+          dot.classList.add('bg-primary', 'scale-110');
+          dot.classList.remove('bg-muted-foreground/30');
+        } else {
+          dot.classList.remove('bg-primary', 'scale-110');
+          dot.classList.add('bg-muted-foreground/30');
+        }
+      });
+    };
+
+    /**
+     * 【純粋な物理的3D紙めくり (フェード完全撤去)】
+     */
+    const goToPage = (targetIndex: number) => {
+      if (isMobileFlipping || targetIndex < 0 || targetIndex >= totalMobilePages || targetIndex === currentMobilePageIndex) return;
+      if (!baseView || !flipLayer || !flipCard || !flipFront || !flipBack) return;
+
+      const fromSpread = Math.floor(currentMobilePageIndex / 2);
+      const toSpread = Math.floor(targetIndex / 2);
+
+      const currentHTML = getPageHTML(currentMobilePageIndex);
+      const targetHTML = getPageHTML(targetIndex);
+
+      if (fromSpread === toSpread) {
+        // 同じ見開き内の移動: JSによるスライド(X方向移動)でDOMを差し替え
+        isMobileFlipping = true;
+        const isNext = targetIndex > currentMobilePageIndex;
+        const direction = isNext ? '-100%' : '100%';
+
+        // 現在のビューをスライドアウトさせつつ、新しいHTMLをセットしてスライドインさせるGSAP
+        gsap.to(baseView, {
+          x: direction,
+          opacity: 0,
+          duration: 0.2,
+          ease: "power2.in",
+          onComplete: () => {
+            baseView.innerHTML = targetHTML;
+            gsap.fromTo(baseView, 
+              { x: isNext ? '100%' : '-100%', opacity: 0 },
+              { x: '0%', opacity: 1, duration: 0.25, ease: "power2.out", onComplete: () => {
+                updateNavUI(targetIndex);
+                isMobileFlipping = false;
+              }}
+            );
+          }
+        });
+        return;
+      }
+
+      // 異なる見開き間の移動: 純粋な3D紙めくりアニメーション
+      isMobileFlipping = true;
+      const isNext = targetIndex > currentMobilePageIndex;
+
+      // 1. 完全な物理DOMセットアップ
+      // モバイルではベースに「次のページ」をセットしておき、めくりレイヤーの裏面も「次のページ」にする
+      baseView.innerHTML = targetHTML;
+      flipFront.innerHTML = currentHTML;
+      flipBack.innerHTML = targetHTML;
+
+      if (isNext) {
+        // 次へ進む (右から左へめくる)
+        gsap.set(flipLayer, { left: '0%', display: 'block' });
+        gsap.set(flipCard, { transformOrigin: 'left center', rotateY: 0 });
+      } else {
+        // 前へ戻る (左から右へめくる)
+        gsap.set(flipLayer, { left: '0%', display: 'block' });
+        gsap.set(flipCard, { transformOrigin: 'right center', rotateY: 0 });
+      }
+
+      const targetRotateY = isNext ? -180 : 180;
+
+      // 2. 不透明度操作なしの純粋な3D回転アニメーション
+      gsap.to(flipCard, {
+        rotateY: targetRotateY,
+        duration: 0.6,
+        ease: "power2.inOut",
+        onComplete: () => {
+          // 3. 完了時の事後処理
+          gsap.set(flipLayer, { display: 'none' });
+          updateNavUI(targetIndex);
+          isMobileFlipping = false;
+        }
+      });
+    };
+
+    cornerPrev?.addEventListener('click', () => goToPage(currentMobilePageIndex - 1));
+    cornerNext?.addEventListener('click', () => goToPage(currentMobilePageIndex + 1));
+
+    mobileDots.forEach((dot) => {
+      dot.addEventListener('click', () => {
+        const target = parseInt(dot.getAttribute('data-target-page') || '0', 10);
+        goToPage(target);
+      });
+    });
+
+    // スワイプ（タッチ）イベントによる検知
+    const wrapper = document.getElementById('mobile-book-wrapper');
+    if (wrapper) {
+      let startX = 0;
+      let startY = 0;
+
+      wrapper.addEventListener('touchstart', (e) => {
+        if (isMobileFlipping) return;
+        startX = e.touches[0].clientX;
+        startY = e.touches[0].clientY;
+      }, { passive: true });
+
+      wrapper.addEventListener('touchend', (e) => {
+        if (isMobileFlipping) return;
+        const endX = e.changedTouches[0].clientX;
+        const endY = e.changedTouches[0].clientY;
+        const deltaX = startX - endX;
+        const deltaY = startY - endY;
+
+        // 縦方向のスクロールより横方向のスワイプが大きい場合のみ判定
+        if (Math.abs(deltaX) > 50 && Math.abs(deltaX) > Math.abs(deltaY)) {
+          if (swipeGuide) {
+            swipeGuide.classList.remove('opacity-100');
+            swipeGuide.classList.add('opacity-0');
+            sessionStorage.setItem('has-seen-swipe-guide', 'true');
+          }
+
+          if (deltaX > 0) {
+            // 左へスワイプ (次へ)
+            goToPage(currentMobilePageIndex + 1);
+          } else {
+            // 右へスワイプ (前へ)
+            goToPage(currentMobilePageIndex - 1);
+          }
+        }
+      }, { passive: true });
+    }
+
+    updateNavUI(0);
+  }
+
+  function setupMobileOpeningAnimation() {
+    const rectStr = sessionStorage.getItem('book-transition-rect');
+    if (!rectStr) return;
+    
+    sessionStorage.removeItem('book-transition-rect');
+
+    const animContainer = document.getElementById('mobile-anim-container');
+    const bookWrapper = document.getElementById('mobile-book-wrapper');
+    const coverAnimLayer = document.getElementById('js-mobile-cover-anim');
+    const coverCard = document.getElementById('js-mobile-cover-card');
+
+    if (!animContainer || !bookWrapper || !coverAnimLayer || !coverCard) return;
+
+    const rect = JSON.parse(rectStr);
+    const W = animContainer.offsetWidth;
+    const H = animContainer.offsetHeight;
+    const containerRect = animContainer.getBoundingClientRect();
+    
+    coverAnimLayer.style.display = 'block';
+
+    const scaleX = rect.width / W;
+    const scaleY = rect.height / H;
+
+    const natOriginX = containerRect.left + W / 2;
+    const natOriginY = containerRect.top + H / 2;
+    const targetOriginX = rect.left + rect.width / 2;
+    const targetOriginY = rect.top + rect.height / 2;
+
+    const dx = targetOriginX - natOriginX;
+    const dy = targetOriginY - natOriginY;
+
+    // 1. 初期状態のセットアップ
+    // コンテナ全体をリストカード位置へ移動・縮小し、わずかに傾ける
+    gsap.set(animContainer, {
+      transformOrigin: "50% 50%",
+      x: dx,
+      y: dy,
+      scaleX: scaleX,
+      scaleY: scaleY,
+      rotateX: 15,
+      opacity: 1
+    });
+
+    // 初期は中身を隠し、表紙は閉じている状態
+    gsap.set(bookWrapper, { opacity: 0 });
+    gsap.set(coverCard, { rotateY: 0 });
+
+    const tl = gsap.timeline();
+
+    // 2. アニメーション
+    // コンテナ全体を中央へ戻し、等倍にする
+    tl.to(animContainer, {
+      x: 0,
+      y: 0,
+      scaleX: 1,
+      scaleY: 1,
+      rotateX: 0,
+      duration: 0.8,
+      ease: "power3.inOut"
+    }, 0);
+
+    // 表紙を左へ開く
+    tl.to(coverCard, {
+      rotateY: -180,
+      duration: 0.8,
+      ease: "power3.inOut"
+    }, 0.1);
+
+    // 中身をフェードインさせる
+    tl.to(bookWrapper, {
+      opacity: 1,
+      duration: 0.4,
+      ease: "power1.out"
+    }, 0.3);
+
+    // 完了時に表紙アニメーション用DOMを隠し、スタイルをリセット
+    tl.to(coverAnimLayer, {
+      opacity: 0,
+      duration: 0.2,
+      onComplete: () => {
+        gsap.set(animContainer, { clearProps: "all" });
+        gsap.set(bookWrapper, { clearProps: "all" });
+        coverAnimLayer.style.display = 'none';
+      }
+    }, 0.8);
+  }
+
+  document.addEventListener('astro:page-load', () => {
+    initMobileProgressUI();
+    setupMobileBookNavigation();
+    setupMobileOpeningAnimation();
+  });
+</script>

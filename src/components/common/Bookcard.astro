@@ -1,15 +1,16 @@
 ---
 interface Props {
-  slug: string;
-  url: string;
-  title: string;
-  description: string;
-  chaptersCount: number;
-  publishedAt: Date;
-  coverImg?: string;
+	slug: string;
+	url: string;
+	title: string;
+	description: string;
+	chaptersCount: number;
+	publishedAt: Date;
+	coverImg?: string;
 }
 
-const { slug, url, title, description, chaptersCount, publishedAt, coverImg } = Astro.props;
+const { slug, url, title, description, chaptersCount, publishedAt, coverImg } =
+	Astro.props;
 ---
 
 <a href={url} class="js-book-link group flex flex-col no-underline text-inherit h-full">
@@ -49,15 +50,24 @@ const { slug, url, title, description, chaptersCount, publishedAt, coverImg } = 
     </div>
   </div>
   
-  <div class="px-2 pt-2 grow flex flex-col">
-    <div class="flex items-center gap-3 text-xs text-muted-foreground mb-3">
-      <time datetime={publishedAt.toISOString()}>
-        {publishedAt.toLocaleDateString("ja-JP", { year: "numeric", month: "short", day: "numeric" })}
-      </time>
-      <span class="px-2 py-0.5 rounded bg-muted/80 border border-border font-mono font-medium text-[10px] text-muted-foreground">
-        {chaptersCount} Chapters
-      </span>
+  <div class="px-2 pt-2 grow flex flex-col" data-book-card-slug={slug} data-chapters-count={chaptersCount}>
+    <div class="flex items-center justify-between text-xs text-muted-foreground mb-3">
+      <div class="flex items-center gap-3">
+        <time datetime={publishedAt.toISOString()}>
+          {publishedAt.toLocaleDateString("ja-JP", { year: "numeric", month: "short", day: "numeric" })}
+        </time>
+        <span class="px-2 py-0.5 rounded bg-muted/80 border border-border font-mono font-medium text-[10px] text-muted-foreground">
+          {chaptersCount} Chapters
+        </span>
+      </div>
+      <span class="js-progress-text hidden font-mono text-[10px] font-semibold text-primary"></span>
     </div>
+
+    {/* プログレスバー */}
+    <div class="js-progress-bar-container hidden w-full h-1.5 bg-muted rounded-full overflow-hidden mb-3">
+      <div class="js-progress-bar h-full bg-primary transition-all duration-300 w-0"></div>
+    </div>
+
     <h3 class="text-lg font-bold leading-snug text-foreground mb-2 line-clamp-2 transition-colors group-hover:text-foreground group-hover:underline decoration-foreground/20 underline-offset-4">
       {title}
     </h3>
@@ -128,8 +138,40 @@ const { slug, url, title, description, chaptersCount, publishedAt, coverImg } = 
 
 <script>
   import { navigate } from 'astro:transitions/client';
+  import { getBookProgress } from '@/utils/bookProgress';
+
+  function updateCardProgress() {
+    const cards = document.querySelectorAll('[data-book-card-slug]');
+    cards.forEach(card => {
+      const slug = card.getAttribute('data-book-card-slug');
+      const countStr = card.getAttribute('data-chapters-count');
+      if (!slug || !countStr) return;
+
+      const total = parseInt(countStr, 10);
+      const { readCount, percentage } = getBookProgress(slug, total);
+
+      const progressText = card.querySelector('.js-progress-text');
+      const container = card.querySelector('.js-progress-bar-container');
+      const bar = card.querySelector('.js-progress-bar') as HTMLElement | null;
+
+      if (readCount > 0) {
+        if (progressText) {
+          progressText.textContent = `${percentage}% (${readCount}/${total})`;
+          progressText.classList.remove('hidden');
+        }
+        if (container) {
+          container.classList.remove('hidden');
+        }
+        if (bar) {
+          bar.style.width = `${percentage}%`;
+        }
+      }
+    });
+  }
 
   document.addEventListener('astro:page-load', () => {
+    updateCardProgress();
+
     const links = document.querySelectorAll('.js-book-link');
     
     links.forEach(link => {

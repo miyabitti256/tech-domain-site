@@ -48,9 +48,7 @@ export function zennLoader(username: string): Loader {
 			}
 
 			const rawItems = result.rss?.channel?.item ?? [];
-			const items: RSSItem[] = Array.isArray(rawItems)
-				? rawItems
-				: [rawItems];
+			const items: RSSItem[] = Array.isArray(rawItems) ? rawItems : [rawItems];
 
 			store.clear();
 

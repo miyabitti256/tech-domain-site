@@ -9,9 +9,12 @@ export async function GET(context: APIContext) {
 	);
 
 	const siteTitle = "miyabittiのテックブログ";
-	const siteDescription = "miyabittiのテックブログです。フロントエンド/TypeScriptをメインに発信していきます。";
+	const siteDescription =
+		"miyabittiのテックブログです。フロントエンド/TypeScriptをメインに発信していきます。";
 	// 末尾のスラッシュを削除
-	const siteUrl = (context.site?.toString() || "https://tech.miyabitti.com").replace(/\/$/, "");
+	const siteUrl = (
+		context.site?.toString() || "https://tech.miyabitti.com"
+	).replace(/\/$/, "");
 
 	const lines = [
 		`# ${siteTitle}`,

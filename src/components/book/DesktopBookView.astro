@@ -1,0 +1,515 @@
+---
+import { BookOpen, Check, RefreshCcw, Sparkles } from "@lucide/astro";
+import AuthorCard from "@/components/layouts/AuthorCard.astro";
+import Badge from "@/components/starwind/badge/Badge.astro";
+import {
+	Breadcrumb,
+	BreadcrumbItem,
+	BreadcrumbLink,
+	BreadcrumbList,
+	BreadcrumbPage,
+	BreadcrumbSeparator,
+} from "@/components/starwind/breadcrumb";
+import type { BookMeta } from "@/contents/book/types";
+import BookPageContent from "./BookPageContent.astro";
+
+interface Props {
+	meta: BookMeta;
+	slug: string;
+	chapterList: { slug: string; title: string; index: number }[];
+	spreads: Array<{
+		spreadIndex: number;
+		leftPage:
+			| { isBookInfo: true }
+			| {
+					chapters: { slug: string; title: string; index: number }[];
+					hasAuthorCard: boolean;
+			  };
+		rightPage: {
+			chapters: { slug: string; title: string; index: number }[];
+			hasAuthorCard: boolean;
+		};
+	}>;
+	formattedDate: string;
+	formattedUpdateDate: string | null;
+	publishedAt: Date;
+	updatedAt: Date | null;
+}
+
+const {
+	meta,
+	slug,
+	chapterList,
+	spreads,
+	formattedDate,
+	formattedUpdateDate,
+	publishedAt,
+	updatedAt,
+} = Astro.props;
+
+const totalSpreads = spreads.length;
+---
+
+<div class="desktop-book-view hidden md:block w-full">
+  <div class="w-full max-w-5xl mx-auto mb-4 px-2 flex items-center justify-end">
+    {totalSpreads > 1 && (
+      <div class="flex items-center gap-2 bg-background/80 backdrop-blur border border-border px-3.5 py-1 rounded-full text-xs font-mono font-medium text-muted-foreground shadow-xs">
+        <span>Spread <span id="js-desktop-spread-current">1</span> / {totalSpreads}</span>
+      </div>
+    )}
+  </div>
+
+  <div class="book-viewport w-full max-w-5xl mx-auto perspective-[2500px] z-0 pb-12">
+    <div
+      id="desktop-anim-container"
+      class="relative w-full"
+      style="transform-style: preserve-3d;"
+    >
+      <div 
+        id="desktop-book-wrapper"
+        class="flex w-full h-[640px] bg-card shadow-2xl overflow-hidden rounded-xl border border-border relative"
+        style="transform-style: preserve-3d;"
+      >
+        {/* ----------------- 1. ベース表示レイヤー (常に1見開き分だけ表示) ----------------- */}
+        <div class="flex w-full h-full relative z-0">
+          {/* ベース左ページ */}
+          <div id="js-desktop-base-left" class="w-1/2 h-full shrink-0 relative border-r border-border/50 bg-[#fafafa] dark:bg-[#1a1a1a] overflow-hidden rounded-l-xl">
+            <div class="absolute right-0 top-0 bottom-0 w-12 book-shadow-left pointer-events-none z-10"></div>
+            <div class="js-base-content-left w-full h-full"></div>
+          </div>
+          
+          {/* ベース右ページ */}
+          <div id="js-desktop-base-right" class="w-1/2 h-full shrink-0 relative bg-[#fdfdfd] dark:bg-[#1f1f1f] overflow-hidden rounded-r-xl">
+            <div class="absolute left-0 top-0 bottom-0 w-12 book-shadow-right pointer-events-none z-10"></div>
+            <div class="js-base-content-right w-full h-full"></div>
+          </div>
+        </div>
+
+        {/* ----------------- 2. めくり角 (Page Corner) UI ----------------- */}
+        {totalSpreads > 1 && (
+          <>
+            <button
+              id="js-desktop-corner-prev"
+              class="page-corner page-corner-prev absolute left-0 bottom-0 z-30 w-16 h-16 group cursor-pointer transition-all duration-300 opacity-0 pointer-events-none select-none"
+              type="button"
+              aria-label="前のページへ"
+            >
+              <div class="corner-fold-prev absolute left-0 bottom-0 w-full h-full transition-transform duration-300 group-hover:scale-125 origin-bottom-left">
+                <div class="w-full h-full bg-linear-to-tr from-black/20 via-black/5 to-transparent dark:from-white/20 dark:via-white/5 border-t border-r border-border/40 rounded-tr-md shadow-md"></div>
+              </div>
+              <span class="absolute left-2 bottom-2 text-[10px] font-mono font-bold text-muted-foreground group-hover:text-foreground transition-colors z-10">◀ PREV</span>
+            </button>
+
+            <button
+              id="js-desktop-corner-next"
+              class="page-corner page-corner-next absolute right-0 bottom-0 z-30 w-16 h-16 group cursor-pointer transition-all duration-300 select-none"
+              type="button"
+              aria-label="次のページへ"
+            >
+              <div class="corner-fold-next absolute right-0 bottom-0 w-full h-full transition-transform duration-300 group-hover:scale-125 origin-bottom-right">
+                <div class="w-full h-full bg-linear-to-tl from-black/20 via-black/5 to-transparent dark:from-white/20 dark:via-white/5 border-t border-l border-border/40 rounded-tl-md shadow-md"></div>
+              </div>
+              <span class="absolute right-2 bottom-2 text-[10px] font-mono font-bold text-muted-foreground group-hover:text-foreground transition-colors z-10">NEXT ▶</span>
+            </button>
+          </>
+        )}
+
+        {/* ----------------- 3. 物理的3D紙めくりレイヤー (フェードなし) ----------------- */}
+        <div 
+          id="js-desktop-flip-layer"
+          class="absolute top-0 bottom-0 z-40 pointer-events-none"
+          style="width: 50%; display: none; transform-style: preserve-3d;"
+        >
+          <div 
+            id="js-desktop-flip-card"
+            class="w-full h-full relative"
+            style="transform-style: preserve-3d;"
+          >
+            {/* 表面 (Front) */}
+            <div 
+              id="js-desktop-flip-front"
+              class="absolute inset-0 bg-[#fdfdfd] dark:bg-[#1f1f1f] border-x border-border/50 overflow-hidden shadow-2xl"
+              style="backface-visibility: hidden;"
+            >
+              <div class="js-flip-content-front w-full h-full"></div>
+            </div>
+            {/* 裏面 (Back) - 初期状態で180度裏返っている */}
+            <div 
+              id="js-desktop-flip-back"
+              class="absolute inset-0 bg-[#fafafa] dark:bg-[#1a1a1a] border-x border-border/50 overflow-hidden shadow-2xl"
+              style="backface-visibility: hidden; transform: rotateY(180deg);"
+            >
+              <div class="js-flip-content-back w-full h-full"></div>
+            </div>
+          </div>
+        </div>
+
+        {/* ----------------- X. オープニングアニメーション用 表紙レイヤー ----------------- */}
+        <div 
+          id="js-desktop-cover-anim"
+          class="absolute top-0 bottom-0 right-0 z-50 pointer-events-none"
+          style="width: 50%; display: none; transform-style: preserve-3d;"
+        >
+          <div 
+            id="js-desktop-cover-card"
+            class="w-full h-full relative"
+            style="transform-style: preserve-3d; transform-origin: left center;"
+          >
+            {/* 表紙 (Front) - BookCardと全く同じデザイン */}
+            <div class="absolute inset-0 overflow-hidden bg-card border border-border shadow-[inset_4px_0_10px_rgba(0,0,0,0.05)] dark:shadow-[inset_4px_0_10px_rgba(0,0,0,0.3)] rounded-r-xl" style="backface-visibility: hidden;">
+              {meta.coverImg ? (
+                <img src={meta.coverImg} alt={meta.title} class="w-full h-full object-cover" loading="lazy" />
+              ) : (
+                <div class="w-full h-full flex items-end p-8 text-foreground font-bold bg-linear-to-br from-muted/50 to-muted text-2xl leading-snug">
+                  <span>{meta.title}</span>
+                </div>
+              )}
+              {/* シャドウ/ハイライト装飾 */}
+              <div class="absolute top-0 left-[6px] bottom-0 w-px bg-black/10 dark:bg-white/10 pointer-events-none"></div>
+              <div class="absolute top-0 left-[7px] bottom-0 w-1 bg-linear-to-r from-black/5 to-transparent dark:from-white/5 pointer-events-none"></div>
+            </div>
+            {/* 表紙裏 (Back) */}
+            <div class="absolute inset-0 bg-background border border-border rounded-l-xl overflow-hidden" style="backface-visibility: hidden; transform: rotateY(180deg);">
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {/* ----------------- 4. データソース (非表示の全ページHTML) ----------------- */}
+  <div id="js-desktop-data-source" class="hidden" aria-hidden="true">
+    {spreads.map((spread, sIndex) => (
+      <div data-spread-data-index={sIndex}>
+        {/* データ：左ページ */}
+        <div class="js-data-left h-full">
+          {'isBookInfo' in spread.leftPage ? (
+            <BookPageContent 
+              type="info"
+              meta={meta}
+              slug={slug}
+              totalChapters={chapterList.length}
+              formattedDate={formattedDate}
+              formattedUpdateDate={formattedUpdateDate}
+              publishedAt={publishedAt}
+              updatedAt={updatedAt}
+            />
+          ) : (
+            <BookPageContent 
+              type="chapters"
+              slug={slug}
+              chapters={spread.leftPage.chapters}
+              hasAuthorCard={spread.leftPage.hasAuthorCard}
+            />
+          )}
+        </div>
+
+        {/* データ：右ページ */}
+        <div class="js-data-right h-full">
+          <BookPageContent 
+            type={sIndex === 0 ? "toc" : "chapters"}
+            meta={meta}
+            slug={slug}
+            chapters={spread.rightPage.chapters}
+            hasAuthorCard={spread.rightPage.hasAuthorCard}
+          />
+        </div>
+      </div>
+    ))}
+  </div>
+</div>
+
+<style>
+  .hide-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  
+  .book-shadow-left {
+    background: linear-gradient(to right, rgba(0,0,0,0) 0%, rgba(0,0,0,0.03) 50%, rgba(0,0,0,0.08) 100%);
+  }
+  :global(.dark) .book-shadow-left {
+    background: linear-gradient(to right, rgba(0,0,0,0) 0%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.4) 100%);
+  }
+  
+  .book-shadow-right {
+    background: linear-gradient(to left, rgba(0,0,0,0) 0%, rgba(0,0,0,0.03) 50%, rgba(0,0,0,0.08) 100%);
+  }
+  :global(.dark) .book-shadow-right {
+    background: linear-gradient(to left, rgba(0,0,0,0) 0%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.4) 100%);
+  }
+
+  .corner-fold-next {
+    clip-path: polygon(100% 0, 100% 100%, 0 100%);
+  }
+  .corner-fold-prev {
+    clip-path: polygon(0 0, 100% 100%, 0 100%);
+  }
+</style>
+
+<script>
+  import gsap from 'gsap';
+  import { getReadChapters, getBookProgress } from '@/utils/bookProgress';
+
+  let currentSpreadIndex = 0;
+  let isFlipping = false;
+  let totalSpreads = 0;
+
+  function initDesktopProgressUI() {
+    const main = document.querySelector('main[data-book-slug]');
+    if (!main) return;
+
+    const bookSlug = main.getAttribute('data-book-slug');
+    const totalCountStr = main.getAttribute('data-total-chapters');
+    if (!bookSlug || !totalCountStr) return;
+
+    const total = parseInt(totalCountStr, 10);
+    const readChapters = getReadChapters(bookSlug);
+    const { readCount, percentage } = getBookProgress(bookSlug, total);
+
+    const progressTexts = document.querySelectorAll('.js-desktop-progress-text');
+    const progressBars = document.querySelectorAll('.js-desktop-progress-bar');
+
+    progressTexts.forEach(el => { el.textContent = `${readCount} / ${total} 章 (${percentage}%)`; });
+    progressBars.forEach(el => { (el as HTMLElement).style.width = `${percentage}%`; });
+
+    const chapterItems = document.querySelectorAll('.desktop-book-view [data-chapter-item-slug]');
+    chapterItems.forEach((item) => {
+      const chSlug = item.getAttribute('data-chapter-item-slug');
+      if (!chSlug) return;
+      const isRead = readChapters.includes(chSlug);
+      const icon = item.querySelector('.js-ch-read-icon');
+      const badge = item.querySelector('.js-ch-badge');
+      if (isRead) {
+        if (icon) icon.classList.remove('hidden');
+        if (badge) badge.classList.add('bg-primary/20', 'text-primary', 'font-bold');
+      } else {
+        if (icon) icon.classList.add('hidden');
+        if (badge) badge.classList.remove('bg-primary/20', 'text-primary', 'font-bold');
+      }
+    });
+  }
+
+  function setupDesktopBookNavigation() {
+    const dataSource = document.getElementById('js-desktop-data-source');
+    if (!dataSource) return;
+
+    const spreadDataNodes = Array.from(dataSource.querySelectorAll('[data-spread-data-index]'));
+    totalSpreads = spreadDataNodes.length;
+
+    const baseLeft = document.querySelector('.js-base-content-left');
+    const baseRight = document.querySelector('.js-base-content-right');
+    const flipLayer = document.getElementById('js-desktop-flip-layer');
+    const flipCard = document.getElementById('js-desktop-flip-card');
+    const flipFront = document.querySelector('.js-flip-content-front');
+    const flipBack = document.querySelector('.js-flip-content-back');
+    const cornerPrev = document.getElementById('js-desktop-corner-prev');
+    const cornerNext = document.getElementById('js-desktop-corner-next');
+    const currentIndicator = document.getElementById('js-desktop-spread-current');
+
+    // ユーティリティ: 指定見開きの左右HTMLを取得
+    const getSpreadHTML = (index: number) => {
+      const node = spreadDataNodes.find(n => parseInt(n.getAttribute('data-spread-data-index') || '-1') === index);
+      if (!node) return { left: '', right: '' };
+      return {
+        left: node.querySelector('.js-data-left')?.innerHTML || '',
+        right: node.querySelector('.js-data-right')?.innerHTML || ''
+      };
+    };
+
+    // 初期描画 (Spread 0)
+    if (baseLeft && baseRight) {
+      const initialHTML = getSpreadHTML(0);
+      baseLeft.innerHTML = initialHTML.left;
+      baseRight.innerHTML = initialHTML.right;
+    }
+
+    if (totalSpreads <= 1) return; // ページが1見開き以下の場合はナビゲーション処理をスキップ
+
+    const updateNavUI = (index: number) => {
+      currentSpreadIndex = index;
+      if (currentIndicator) currentIndicator.textContent = String(index + 1);
+
+      if (cornerPrev) {
+        if (index === 0) cornerPrev.classList.add('opacity-0', 'pointer-events-none');
+        else cornerPrev.classList.remove('opacity-0', 'pointer-events-none');
+      }
+      if (cornerNext) {
+        if (index === totalSpreads - 1) cornerNext.classList.add('opacity-0', 'pointer-events-none');
+        else cornerNext.classList.remove('opacity-0', 'pointer-events-none');
+      }
+    };
+
+    /**
+     * 【純粋な物理的3D紙めくり (フェード完全撤去)】
+     */
+    const flipToSpread = (targetIndex: number) => {
+      if (isFlipping || targetIndex < 0 || targetIndex >= totalSpreads || targetIndex === currentSpreadIndex) return;
+      if (!baseLeft || !baseRight || !flipLayer || !flipCard || !flipFront || !flipBack) return;
+
+      isFlipping = true;
+      const isNext = targetIndex > currentSpreadIndex;
+      
+      const currentHTML = getSpreadHTML(currentSpreadIndex);
+      const targetHTML = getSpreadHTML(targetIndex);
+
+      // --- 1. アニメーション前の完全な物理DOMセットアップ ---
+      if (isNext) {
+        // 【次へ進む】 (右ページを左へめくる)
+        // 背景(ベース): 左は今のまま。右は「次の右」に差し替えておく(めくった下から現れる)
+        baseRight.innerHTML = targetHTML.right;
+
+        // めくりペラ紙: 右半面に配置し、左端(綴じ目)を軸に回転
+        gsap.set(flipLayer, { left: '50%', display: 'block' });
+        gsap.set(flipCard, { transformOrigin: 'left center', rotateY: 0 });
+
+        // めくりペラ紙の表面: 「今の右」
+        flipFront.innerHTML = currentHTML.right;
+        // めくりペラ紙の裏面: 「次の左」
+        flipBack.innerHTML = targetHTML.left;
+        
+      } else {
+        // 【前へ戻る】 (左ページを右へめくる)
+        // 背景(ベース): 右は今のまま。左は「次の左」に差し替えておく(めくった下から現れる)
+        baseLeft.innerHTML = targetHTML.left;
+
+        // めくりペラ紙: 左半面に配置し、右端(綴じ目)を軸に回転
+        gsap.set(flipLayer, { left: '0%', display: 'block' });
+        gsap.set(flipCard, { transformOrigin: 'right center', rotateY: 0 });
+
+        // めくりペラ紙の表面: 「今の左」
+        flipFront.innerHTML = currentHTML.left;
+        // めくりペラ紙の裏面: 「次の右」
+        flipBack.innerHTML = targetHTML.right;
+      }
+
+      // --- 2. 不透明度操作なしの純粋な3D回転アニメーション ---
+      const targetRotateY = isNext ? -180 : 180;
+
+      gsap.to(flipCard, {
+        rotateY: targetRotateY,
+        duration: 0.6,
+        ease: "power2.inOut",
+        onComplete: () => {
+          // --- 3. 完了時の事後処理 ---
+          // 視覚的には既に完璧に次の見開きが完成している。
+          // ベースのDOMを正式に次の見開き状態に同期させ、めくりレイヤーを隠す。
+          if (isNext) {
+            baseLeft.innerHTML = targetHTML.left;
+          } else {
+            baseRight.innerHTML = targetHTML.right;
+          }
+          gsap.set(flipLayer, { display: 'none' });
+          updateNavUI(targetIndex);
+          isFlipping = false;
+        }
+      });
+    };
+
+    cornerPrev?.addEventListener('click', () => flipToSpread(currentSpreadIndex - 1));
+    cornerNext?.addEventListener('click', () => flipToSpread(currentSpreadIndex + 1));
+
+    updateNavUI(0);
+  }
+
+  function setupDesktopOpeningAnimation() {
+    const rectStr = sessionStorage.getItem('book-transition-rect');
+    if (!rectStr) return;
+    
+    sessionStorage.removeItem('book-transition-rect');
+
+    const animContainer = document.getElementById('desktop-anim-container');
+    const bookWrapper = document.getElementById('desktop-book-wrapper');
+    const coverAnimLayer = document.getElementById('js-desktop-cover-anim');
+    const coverCard = document.getElementById('js-desktop-cover-card');
+
+    if (!animContainer || !bookWrapper || !coverAnimLayer || !coverCard) return;
+
+    const rect = JSON.parse(rectStr);
+    const W = animContainer.offsetWidth;
+    const H = animContainer.offsetHeight;
+    const containerRect = animContainer.getBoundingClientRect();
+    
+    // 表紙レイヤーを表示
+    coverAnimLayer.style.display = 'block';
+
+    // 折りたたまれた本（右半分）の幅とスケール
+    const foldedW = W / 2;
+    const scaleX = rect.width / foldedW;
+    const scaleY = rect.height / H;
+
+    // 基準点をデスクトップは右ページ(全体の75%)に設定
+    const natOriginX = containerRect.left + W * 0.75;
+    const natOriginY = containerRect.top + H / 2;
+
+    const targetOriginX = rect.left + rect.width / 2;
+    const targetOriginY = rect.top + rect.height / 2;
+
+    const dx = targetOriginX - natOriginX;
+    const dy = targetOriginY - natOriginY;
+
+    // 1. 初期状態のセットアップ
+    // コンテナ全体をリストカード位置へ移動・縮小し、わずかに傾ける
+    gsap.set(animContainer, {
+      transformOrigin: "75% 50%",
+      x: dx,
+      y: dy,
+      scaleX: scaleX,
+      scaleY: scaleY,
+      rotateX: 15,
+      opacity: 1
+    });
+
+    // 初期は左半分(中身)を隠し、表紙は閉じている状態
+    gsap.set(bookWrapper, { clipPath: "inset(0% 0% 0% 50%)" });
+    gsap.set(coverCard, { rotateY: 0 });
+
+    const tl = gsap.timeline();
+
+    // 2. アニメーション
+    // コンテナ全体を中央へ戻し、等倍にする
+    tl.to(animContainer, {
+      x: 0,
+      y: 0,
+      scaleX: 1,
+      scaleY: 1,
+      rotateX: 0,
+      duration: 0.8,
+      ease: "power3.inOut"
+    }, 0);
+
+    // 表紙を左へ開く
+    tl.to(coverCard, {
+      rotateY: -180,
+      duration: 0.8,
+      ease: "power3.inOut"
+    }, 0.1);
+
+    // 左半分のクリップパスを解除して中身を見せる
+    tl.to(bookWrapper, {
+      clipPath: "inset(0% 0% 0% 0%)",
+      duration: 0.4,
+      ease: "power2.in"
+    }, 0.3);
+
+    // 完了時に表紙アニメーション用DOMを隠し、スタイルをリセット
+    tl.to(coverAnimLayer, {
+      opacity: 0,
+      duration: 0.2,
+      onComplete: () => {
+        gsap.set(animContainer, { clearProps: "all" });
+        gsap.set(bookWrapper, { clearProps: "all" });
+        coverAnimLayer.style.display = 'none';
+      }
+    }, 0.8);
+  }
+
+  document.addEventListener('astro:page-load', () => {
+    setupDesktopBookNavigation();
+    initDesktopProgressUI();
+    setupDesktopOpeningAnimation();
+  });
+</script>

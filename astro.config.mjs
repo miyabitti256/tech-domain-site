@@ -4,6 +4,7 @@ import sitemap from "@astrojs/sitemap";
 import tailwindcss from "@tailwindcss/vite";
 import expressiveCode from "astro-expressive-code";
 import { defineConfig, fontProviders } from "astro/config";
+import { unified } from "@astrojs/markdown-remark";
 import rehypeAutolinkHeadings from "rehype-autolink-headings";
 import rehypeExternalLinks from "rehype-external-links";
 import rehypeMathjax from "rehype-mathjax/svg";
@@ -29,36 +30,38 @@ export default defineConfig({
 	},
 
 	markdown: {
-		remarkPlugins: [
-			remarkMermaidSsr,
-			remarkGithubAlerts,
-			remarkBreaks,
-			remarkDirective,
-			remarkCustomDirectives,
-			remarkEmbeds,
-			[remarkLinkCard, { cache: true }],
-			remarkMath,
-		],
-		rehypePlugins: [
-			rehypeSlug,
-			[
-				rehypeAutolinkHeadings,
-				{
-					behavior: "prepend",
-					properties: {
-						className: ["heading-anchor"],
-						ariaHidden: true,
-						tabIndex: -1,
+		processor: unified({
+			remarkPlugins: [
+				remarkMermaidSsr,
+				remarkGithubAlerts,
+				remarkBreaks,
+				remarkDirective,
+				remarkCustomDirectives,
+				remarkEmbeds,
+				[remarkLinkCard, { cache: true }],
+				remarkMath,
+			],
+			rehypePlugins: [
+				rehypeSlug,
+				[
+					rehypeAutolinkHeadings,
+					{
+						behavior: "prepend",
+						properties: {
+							className: ["heading-anchor"],
+							ariaHidden: true,
+							tabIndex: -1,
+						},
+						content: { type: "text", value: "#" },
 					},
-					content: { type: "text", value: "#" },
-				},
+				],
+				[
+					rehypeExternalLinks,
+					{ target: "_blank", rel: ["noopener", "noreferrer"] },
+				],
+				rehypeMathjax,
 			],
-			[
-				rehypeExternalLinks,
-				{ target: "_blank", rel: ["noopener", "noreferrer"] },
-			],
-			rehypeMathjax,
-		],
+		}),
 	},
 
 	integrations: [

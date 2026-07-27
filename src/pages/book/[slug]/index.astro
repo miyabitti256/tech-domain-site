@@ -1,16 +1,8 @@
 ---
 import { getCollection } from "astro:content";
-import { BookOpen, ChevronLeft, ChevronRight, RefreshCcw } from "@lucide/astro";
-import AuthorCard from "@/components/layouts/AuthorCard.astro";
-import Badge from "@/components/starwind/badge/Badge.astro";
-import {
-	Breadcrumb,
-	BreadcrumbItem,
-	BreadcrumbLink,
-	BreadcrumbList,
-	BreadcrumbPage,
-	BreadcrumbSeparator,
-} from "@/components/starwind/breadcrumb";
+import { ChevronLeft } from "@lucide/astro";
+import DesktopBookView from "@/components/book/DesktopBookView.astro";
+import MobileBookView from "@/components/book/MobileBookView.astro";
 import type { BookMeta } from "@/contents/book/types";
 import Layout from "@/layouts/Layout.astro";
 
@@ -60,6 +52,161 @@ const formattedUpdateDate = updatedAt
 			day: "numeric",
 		})
 	: null;
+
+// 章データリスト作成
+const chapterList = meta.chapters.map((chSlug, idx) => ({
+	slug: chSlug,
+	title: chapterTitles.get(chSlug) || chSlug,
+	index: idx + 1,
+}));
+
+// 見開き (Spread) 分割計算ロジック
+type PageContent = {
+	chapters: typeof chapterList;
+	hasAuthorCard: boolean;
+};
+
+type Spread = {
+	spreadIndex: number;
+	leftPage: PageContent | { isBookInfo: true };
+	rightPage: PageContent;
+};
+
+function calculateSpreads(chapters: typeof chapterList): Spread[] {
+	const CHAPTER_CAPACITY = 8;
+	const AUTHOR_CARD_COST = 2;
+
+	const spreads: Spread[] = [];
+	let remainingChapters = [...chapters];
+
+	// Spread 0
+	const rightPage0Chapters: typeof chapterList = [];
+	let rightPage0Slots = 0;
+
+	while (
+		remainingChapters.length > 0 &&
+		rightPage0Slots + 1 <= CHAPTER_CAPACITY
+	) {
+		if (
+			remainingChapters.length <=
+			CHAPTER_CAPACITY - rightPage0Slots - AUTHOR_CARD_COST
+		) {
+			rightPage0Chapters.push(...remainingChapters);
+			remainingChapters = [];
+			rightPage0Slots += rightPage0Chapters.length;
+			break;
+		}
+		const nextCh = remainingChapters.shift();
+		if (nextCh) {
+			rightPage0Chapters.push(nextCh);
+			rightPage0Slots += 1;
+		}
+	}
+
+	const rightPage0HasAuthor =
+		remainingChapters.length === 0 &&
+		rightPage0Slots + AUTHOR_CARD_COST <= CHAPTER_CAPACITY;
+
+	spreads.push({
+		spreadIndex: 0,
+		leftPage: { isBookInfo: true },
+		rightPage: {
+			chapters: rightPage0Chapters,
+			hasAuthorCard: rightPage0HasAuthor,
+		},
+	});
+
+	let authorCardPlaced = rightPage0HasAuthor;
+
+	// 追加のSpread構築
+	let currentSpreadIndex = 1;
+	while (remainingChapters.length > 0 || !authorCardPlaced) {
+		// Left Page
+		const leftChapters: typeof chapterList = [];
+		let leftSlots = 0;
+
+		while (remainingChapters.length > 0 && leftSlots + 1 <= CHAPTER_CAPACITY) {
+			if (
+				remainingChapters.length <=
+				CHAPTER_CAPACITY - leftSlots - AUTHOR_CARD_COST
+			) {
+				leftChapters.push(...remainingChapters);
+				remainingChapters = [];
+				leftSlots += leftChapters.length;
+				break;
+			}
+			const nextCh = remainingChapters.shift();
+			if (nextCh) {
+				leftChapters.push(nextCh);
+				leftSlots += 1;
+			}
+		}
+
+		let leftHasAuthor = false;
+		if (
+			remainingChapters.length === 0 &&
+			!authorCardPlaced &&
+			leftSlots + AUTHOR_CARD_COST <= CHAPTER_CAPACITY
+		) {
+			leftHasAuthor = true;
+			authorCardPlaced = true;
+		}
+
+		// Right Page
+		const rightChapters: typeof chapterList = [];
+		let rightSlots = 0;
+		let rightHasAuthor = false;
+
+		if (remainingChapters.length > 0 || !authorCardPlaced) {
+			while (
+				remainingChapters.length > 0 &&
+				rightSlots + 1 <= CHAPTER_CAPACITY
+			) {
+				if (
+					remainingChapters.length <=
+					CHAPTER_CAPACITY - rightSlots - AUTHOR_CARD_COST
+				) {
+					rightChapters.push(...remainingChapters);
+					remainingChapters = [];
+					rightSlots += rightChapters.length;
+					break;
+				}
+				const nextCh = remainingChapters.shift();
+				if (nextCh) {
+					rightChapters.push(nextCh);
+					rightSlots += 1;
+				}
+			}
+
+			if (
+				remainingChapters.length === 0 &&
+				!authorCardPlaced &&
+				rightSlots + AUTHOR_CARD_COST <= CHAPTER_CAPACITY
+			) {
+				rightHasAuthor = true;
+				authorCardPlaced = true;
+			}
+		}
+
+		spreads.push({
+			spreadIndex: currentSpreadIndex,
+			leftPage: {
+				chapters: leftChapters,
+				hasAuthorCard: leftHasAuthor,
+			},
+			rightPage: {
+				chapters: rightChapters,
+				hasAuthorCard: rightHasAuthor,
+			},
+		});
+
+		currentSpreadIndex++;
+	}
+
+	return spreads;
+}
+
+const spreads = calculateSpreads(chapterList);
 ---
 
 <Layout 
@@ -105,8 +252,7 @@ const formattedUpdateDate = updatedAt
     })} />
   </Fragment>
 
-  <main class="py-8 md:px-4 bg-muted/10 relative overflow-x-hidden">
-    
+  <main class="py-8 md:px-4 bg-muted/10 relative overflow-x-hidden" data-book-slug={slug} data-total-chapters={chapterList.length}>
     <div class="w-full max-w-5xl mx-auto mb-4 px-6 md:px-2 z-10 mt-8 md:mt-2">
       <a href="/book" class="inline-flex items-center text-sm font-medium text-muted-foreground hover:text-foreground transition-colors group">
         <ChevronLeft class="w-4 h-4 mr-1 transition-transform group-hover:-translate-x-1" />
@@ -114,421 +260,28 @@ const formattedUpdateDate = updatedAt
       </a>
     </div>
 
-    <div class="book-viewport w-full max-w-5xl mx-auto perspective-[2000px] z-0 pb-12">
-      <div
-        id="book-anim-container"
-        class="relative w-full"
-        style="transform-style: preserve-3d;"
-      >        <div 
-          id="book-wrapper"
-          class="flex w-full min-h-[700px] bg-card shadow-2xl overflow-hidden rounded-md md:rounded-xl border border-border"
-        >
-          {/* モバイル用スライダー (md以上では見開き) */}
-          <div id="book-slider" class="flex w-full overflow-x-auto snap-x snap-mandatory hide-scrollbar md:snap-none md:overflow-visible scroll-smooth relative z-0">
-            
-            {/* 左ページ */}
-            <div id="book-left-page" class="w-full md:w-1/2 shrink-0 snap-center relative border-r border-border/50 bg-[#fafafa] dark:bg-[#1a1a1a]">
-            {/* 本の綴じ目 シャドウ */}
-            <div class="absolute right-0 top-0 bottom-0 w-8 md:w-12 book-shadow-left pointer-events-none z-10"></div>
-            
-            <div class="p-8 md:p-12 pb-24 md:pb-12 relative z-0">
-              <div class="mb-8">
-                <Breadcrumb>
-                  <BreadcrumbList>
-                    <BreadcrumbItem>
-                      <BreadcrumbLink href="/">Home</BreadcrumbLink>
-                    </BreadcrumbItem>
-                    <BreadcrumbSeparator />
-                    <BreadcrumbItem>
-                      <BreadcrumbLink href="/book">Book</BreadcrumbLink>
-                    </BreadcrumbItem>
-                    <BreadcrumbSeparator />
-                    <BreadcrumbItem>
-                      <BreadcrumbPage class="line-clamp-1">{meta.title}</BreadcrumbPage>
-                    </BreadcrumbItem>
-                  </BreadcrumbList>
-                </Breadcrumb>
-              </div>
+    {/* PC表示用コンポーネント (完璧な見開き3Dフリップ) */}
+    <DesktopBookView 
+      meta={meta}
+      slug={slug}
+      chapterList={chapterList}
+      spreads={spreads}
+      formattedDate={formattedDate}
+      formattedUpdateDate={formattedUpdateDate}
+      publishedAt={publishedAt}
+      updatedAt={updatedAt}
+    />
 
-              <h1 class="text-3xl md:text-4xl font-bold tracking-tight text-foreground mb-6 leading-snug">
-                {meta.title}
-              </h1>
-
-              <div class="flex flex-wrap items-center gap-x-4 gap-y-2 mb-6 text-sm text-muted-foreground">
-                <time datetime={publishedAt.toISOString()}>{formattedDate}</time>
-                {updatedAt && (
-                  <div class="flex items-center gap-1.5 list-none">
-                    <RefreshCcw class="w-4 h-4" />
-                    <time datetime={updatedAt.toISOString()}>{formattedUpdateDate}</time>
-                  </div>
-                )}
-                {meta.tags && meta.tags.length > 0 && (
-                  <>
-                    <span>&bull;</span>
-                    <div class="flex flex-wrap gap-2">
-                      {meta.tags.map((tag) => (
-                        <Badge href={`/search?tag=${encodeURIComponent(tag)}`} variant="outline" class="text-xs">
-                          <span class="mr-0.5 text-muted-foreground">#</span>{tag}
-                        </Badge>
-                      ))}
-                    </div>
-                  </>
-                )}
-              </div>
-
-              <div class="text-lg text-muted-foreground leading-relaxed mb-8 font-medium">
-                {meta.description}
-              </div>
-
-              {/* サマリーを本文として表示 */}
-              <div class="prose prose-sm dark:prose-invert max-w-none prose-headings:font-bold prose-headings:text-foreground prose-a:text-primary prose-a:no-underline hover:prose-a:underline text-muted-foreground">
-                <Fragment set:html={meta.summary
-                  .split('\n')
-                  .map(line => {
-                    if (line.startsWith('### ')) return `<h3>${line.slice(4)}</h3>`;
-                    if (line.startsWith('## ')) return `<h2>${line.slice(3)}</h2>`;
-                    if (line.startsWith('- ')) return `<li>${line.slice(2).replace(/\*\*(.+?)\*\*/g, '<strong class="text-foreground">$1</strong>')}</li>`;
-                    if (line.trim() === '') return '';
-                    return `<p>${line.replace(/\*\*(.+?)\*\*/g, '<strong class="text-foreground">$1</strong>').replace(/`(.+?)`/g, '<code class="text-foreground">$1</code>')}</p>`;
-                  })
-                  .join('\n')
-                } />
-              </div>
-            </div>
-          </div>
-
-          {/* 右ページ */}
-          <div class="w-full md:w-1/2 shrink-0 snap-center relative bg-[#fdfdfd] dark:bg-[#1f1f1f] rounded-r-md md:rounded-r-xl">
-            {/* 本の綴じ目 シャドウ */}
-            <div class="absolute left-0 top-0 bottom-0 w-8 md:w-12 book-shadow-right pointer-events-none z-10"></div>
-            
-            <div class="p-8 md:p-12 pb-24 md:pb-12 relative z-0 flex flex-col h-full min-h-max">
-              
-              <div class="flex items-center justify-between mb-8 pb-4 border-b border-border/50 shrink-0">
-                <h2 class="text-2xl font-bold flex items-center gap-2 text-foreground">
-                  <BookOpen class="w-6 h-6 text-muted-foreground" /> 目次
-                </h2>
-                <span class="text-xs text-muted-foreground bg-muted px-3 py-1 rounded-full font-medium border border-border/50">{meta.chapters.length} 章</span>
-              </div>
-              
-              <ol class="grow space-y-2 mb-12">
-                {meta.chapters.map((ch, i) => (
-                  <li>
-                    <a href={`/book/${slug}/${ch}`} class="flex items-center gap-4 p-4 rounded-lg hover:bg-muted/50 transition-colors group border border-transparent hover:border-border/50 bg-background/50">
-                      <span class="shrink-0 w-8 h-8 rounded-full bg-muted flex items-center justify-center text-sm font-mono text-muted-foreground group-hover:bg-primary group-hover:text-primary-foreground transition-colors shadow-sm">
-                        {i + 1}
-                      </span>
-                      <span class="font-medium text-foreground group-hover:text-primary transition-colors grow">
-                        {chapterTitles.get(ch) || ch}
-                      </span>
-                      <ChevronRight class="w-5 h-5 text-muted-foreground/30 group-hover:text-primary transition-colors" />
-                    </a>
-                  </li>
-                ))}
-              </ol>
-
-              <div class="mt-auto pt-8 border-t border-border/50 shrink-0">
-                <AuthorCard />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* デスクトップ＆モバイルアニメーション用 疑似3D表紙 */}
-        <div id="book-cover-anim" class="absolute left-0 top-0 w-full md:w-1/2 h-full z-50 pointer-events-none" style="transform-style: preserve-3d; display: none;">
-          {/* 疑似表紙の裏面 (開いた後の左ページ背景) */}
-          <div id="book-cover-back-anim" class="absolute inset-0 bg-[#fafafa] dark:bg-[#1a1a1a] rounded-l-md md:rounded-l-xl border-y border-l border-border/50 shadow-inner" style="backface-visibility: hidden;"></div>
-          
-          {/* 疑似表紙の表面 (リスト画面で見えていた表紙) */}
-          <div id="book-cover-front-anim" class="absolute inset-0 bg-card rounded-l-md md:rounded-l-xl border-y border-l border-border overflow-hidden shadow-[inset_4px_0_10px_rgba(0,0,0,0.05)] dark:shadow-[inset_4px_0_10px_rgba(0,0,0,0.3)]" style="transform: rotateY(180deg); backface-visibility: hidden;">
-            {meta.coverImg ? (
-              <img src={meta.coverImg} alt={meta.title} class="w-full h-full object-cover" fetchpriority="high" />
-            ) : (
-              <div class="w-full h-full flex items-end p-6 md:p-8 text-foreground font-bold bg-linear-to-br from-muted/50 to-muted text-xl md:text-2xl leading-snug">
-                <span>{meta.title}</span>
-              </div>
-            )}
-            <div class="absolute top-0 right-[6px] bottom-0 w-px bg-black/10 dark:bg-white/10 pointer-events-none"></div>
-            <div class="absolute top-0 right-[7px] bottom-0 w-1 bg-linear-to-l from-black/5 to-transparent dark:from-white/5 pointer-events-none"></div>
-          </div>
-        </div>
-      </div>
-
-      {/* モバイル用インジケータ */}
-        <div class="md:hidden absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-3 z-20 bg-background/90 backdrop-blur-md px-4 py-2 rounded-full border border-border shadow-sm">
-          <button id="btn-page-1" class="w-2.5 h-2.5 rounded-full bg-primary transition-colors" aria-label="Page 1 (Metadata)"></button>
-          <button id="btn-page-2" class="w-2.5 h-2.5 rounded-full bg-muted-foreground/30 transition-colors hover:bg-muted-foreground/50" aria-label="Page 2 (Chapters)"></button>
-        </div>
-      </div>
-    </div>
+    {/* モバイル表示用コンポーネント (破綻のない単一ページナビ & スクロール同期めくり) */}
+    <MobileBookView 
+      meta={meta}
+      slug={slug}
+      chapterList={chapterList}
+      spreads={spreads}
+      formattedDate={formattedDate}
+      formattedUpdateDate={formattedUpdateDate}
+      publishedAt={publishedAt}
+      updatedAt={updatedAt}
+    />
   </main>
 </Layout>
-
-<style>
-  .hide-scrollbar {
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-  }
-  .hide-scrollbar::-webkit-scrollbar {
-    display: none;
-  }
-  
-  /* 中央の影 (左ページ右端) */
-  .book-shadow-left {
-    background: linear-gradient(to right, rgba(0,0,0,0) 0%, rgba(0,0,0,0.03) 50%, rgba(0,0,0,0.08) 100%);
-  }
-  :global(.dark) .book-shadow-left {
-    background: linear-gradient(to right, rgba(0,0,0,0) 0%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.4) 100%);
-  }
-  
-  /* 中央の影 (右ページ左端) */
-  .book-shadow-right {
-    background: linear-gradient(to left, rgba(0,0,0,0) 0%, rgba(0,0,0,0.03) 50%, rgba(0,0,0,0.08) 100%);
-  }
-  :global(.dark) .book-shadow-right {
-    background: linear-gradient(to left, rgba(0,0,0,0) 0%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.4) 100%);
-  }
-</style>
-
-<script>
-  import gsap from 'gsap';
-
-  function setupBookSlider() {
-    const slider = document.getElementById('book-slider');
-    const btn1 = document.getElementById('btn-page-1');
-    const btn2 = document.getElementById('btn-page-2');
-
-    if (!slider || !btn1 || !btn2) return;
-
-    slider.onscroll = null;
-    btn1.onclick = null;
-    btn2.onclick = null;
-
-    const updateActiveButton = () => {
-      const scrollLeft = slider.scrollLeft;
-      const width = slider.clientWidth;
-      if (width === 0) return;
-      
-      const pageIndex = Math.round(scrollLeft / width);
-
-      if (pageIndex === 0) {
-        btn1.classList.remove('bg-muted-foreground/30');
-        btn1.classList.add('bg-primary');
-        btn2.classList.remove('bg-primary');
-        btn2.classList.add('bg-muted-foreground/30');
-      } else {
-        btn1.classList.remove('bg-primary');
-        btn1.classList.add('bg-muted-foreground/30');
-        btn2.classList.remove('bg-muted-foreground/30');
-        btn2.classList.add('bg-primary');
-      }
-    };
-
-    slider.addEventListener('scroll', updateActiveButton, { passive: true });
-    
-    btn1.addEventListener('click', () => {
-      slider.scrollTo({ left: 0, behavior: 'smooth' });
-    });
-    btn2.addEventListener('click', () => {
-      slider.scrollTo({ left: slider.clientWidth, behavior: 'smooth' });
-    });
-    
-    // 初期状態を反映
-    updateActiveButton();
-  }
-
-  document.addEventListener('astro:page-load', () => {
-    setTimeout(setupBookSlider, 50);
-
-    // 不要なトランジション無効化クラスを解除
-    document.documentElement.classList.remove('disable-vt-fade');
-
-    const rectStr = sessionStorage.getItem('book-transition-rect');
-    if (!rectStr) return; // 遷移アニメーション不要の場合は何もしない
-
-    sessionStorage.removeItem('book-transition-rect');
-
-    const animContainer = document.getElementById('book-anim-container');
-    const wrapper = document.getElementById('book-wrapper');
-    const coverAnim = document.getElementById('book-cover-anim');
-    const slider = document.getElementById('book-slider');
-    
-    if (!animContainer || !wrapper || !coverAnim || !slider) return;
-
-    const isMobile = window.innerWidth < 768;
-    const rect = JSON.parse(rectStr);
-
-    // 要素の本来のサイズと位置を取得
-    const W = animContainer.offsetWidth;
-    const H = animContainer.offsetHeight;
-    const containerRect = animContainer.getBoundingClientRect();
-    
-    // アニメーション用に一時的に表示設定を変更
-    coverAnim.style.display = 'block';
-    
-    // 畳まれた本（右半分）の幅（モバイルは全幅）
-    const foldedW = isMobile ? W : W / 2;
-    // リスト画面の本とのスケール比（X/Y個別に計算）
-    const scaleX = rect.width / foldedW;
-    const scaleY = rect.height / H;
-
-    // 基準点: デスクトップは右ページ(全体の75%)、モバイルは全体の中央(50%)
-    const natOriginX = containerRect.left + W * (isMobile ? 0.5 : 0.75);
-    const natOriginY = containerRect.top + H / 2;
-
-    const targetOriginX = rect.left + rect.width / 2;
-    const targetOriginY = rect.top + rect.height / 2;
-
-    const dx = targetOriginX - natOriginX;
-    const dy = targetOriginY - natOriginY;
-
-    const tl = gsap.timeline();
-
-    if (isMobile) {
-      const coverFront = document.getElementById('book-cover-front-anim');
-      const coverBack = document.getElementById('book-cover-back-anim');
-
-      // 1. セットアップ
-      // 表紙を右端を軸に右方向へ開くアニメーション
-      // 0度 = 閉じている状態 / 180度 = 右へ完全に開いた状態
-      if (coverFront) gsap.set(coverFront, { rotateY: 0 });
-      if (coverBack) gsap.set(coverBack, { rotateY: 180 });
-
-      // カバーを閉じた状態(0度)。ヒンジは右端（表紙を右へ開く）
-      gsap.set(coverAnim, {
-        x: 0,
-        transformOrigin: "right center",
-        rotateY: 0
-      });
-
-      // animContainerをカード位置から中央へ
-      gsap.set(animContainer, {
-        transformOrigin: "50% 50%",
-        x: dx,
-        y: dy,
-        scaleX: scaleX,
-        scaleY: scaleY,
-        rotateX: 15,
-        opacity: 1
-      });
-
-      // sliderは左ページ(x:0)を表示した状態で、表紙が開くまで隠す
-      gsap.set(slider, { x: 0, opacity: 0 });
-      gsap.set(wrapper, { clipPath: "inset(0% 0% 0% 0%)" });
-
-      // 2. アニメーション
-      // 全体が中央へ移動
-      tl.to(animContainer, {
-        x: 0,
-        y: 0,
-        scaleX: 1,
-        scaleY: 1,
-        rotateX: 0,
-        duration: 0.8,
-        ease: "power3.inOut"
-      }, 0);
-
-      // 表紙を右へ開く (0 -> 180)
-      // 右端を軸に、左端が手前→右へスイングし、表紙裏面が見える
-      tl.to(coverAnim, {
-        rotateY: 180,
-        duration: 0.8,
-        ease: "power3.inOut"
-      }, 0.1);
-
-      // 表紙が開ききったタイミングで左ページの中身をフェードイン
-      tl.to(slider, {
-        opacity: 1,
-        duration: 0.3,
-        ease: "power1.out"
-      }, 0.8);
-
-      // 完了処理: 表紙アニメーション要素をフェードアウト
-      tl.to(coverAnim, {
-        opacity: 0,
-        duration: 0.15,
-        ease: "none",
-        onComplete: () => {
-          const transitionStyle = document.getElementById('book-transition-style');
-          if (transitionStyle) transitionStyle.remove();
-          
-          gsap.set(animContainer, { clearProps: "all" });
-          gsap.set(wrapper, { clearProps: "all" });
-          gsap.set(slider, { clearProps: "all" });
-          gsap.set(coverAnim, { clearProps: "all" });
-          if (coverFront) gsap.set(coverFront, { clearProps: "all" });
-          if (coverBack) gsap.set(coverBack, { clearProps: "all" });
-          
-          coverAnim.style.display = 'none';
-        }
-      }, 0.9);
-
-    } else {
-      // デスクトップ
-      gsap.set(animContainer, {
-        transformOrigin: "75% 50%",
-        x: dx,
-        y: dy,
-        scaleX: scaleX,
-        scaleY: scaleY,
-        rotateX: 15,
-        opacity: 1
-      });
-
-      gsap.set(wrapper, { clipPath: "inset(0% 0% 0% 50%)" });
-
-      gsap.set(coverAnim, {
-        transformOrigin: "right center",
-        rotateY: 180,
-        x: 0
-      });
-
-      gsap.set(slider, { opacity: 0 });
-
-      tl.to(animContainer, {
-        x: 0,
-        y: 0,
-        scaleX: 1,
-        scaleY: 1,
-        rotateX: 0,
-        duration: 0.8,
-        ease: "power3.inOut"
-      }, 0);
-
-      tl.to(coverAnim, {
-        rotateY: 0,
-        duration: 0.8,
-        ease: "power3.inOut"
-      }, 0.1);
-
-      tl.to(wrapper, {
-        clipPath: "inset(0% 0% 0% 0%)",
-        duration: 0.4,
-        ease: "power2.in"
-      }, 0.2);
-
-      tl.to(slider, {
-        opacity: 1,
-        duration: 0.2,
-        ease: "none"
-      }, 0.7);
-
-      tl.to(coverAnim, {
-        opacity: 0,
-        duration: 0.2,
-        ease: "none",
-        onComplete: () => {
-          const transitionStyle = document.getElementById('book-transition-style');
-          if (transitionStyle) transitionStyle.remove();
-          
-          gsap.set(animContainer, { clearProps: "all" });
-          gsap.set(wrapper, { clearProps: "all" });
-          gsap.set(slider, { clearProps: "all" });
-          gsap.set(coverAnim, { clearProps: "all" });
-          
-          coverAnim.style.display = 'none';
-        }
-      }, 0.7);
-    }
-  });
-</script>

@@ -19,7 +19,9 @@ export async function GET(context: APIContext) {
 			pubDate: article.data.publishedAt,
 			description: article.data.description,
 			link: `/article/${article.id}/`,
-			customData: article.data.updatedAt ? `<updated>${article.data.updatedAt.toISOString()}</updated>` : undefined,
+			customData: article.data.updatedAt
+				? `<updated>${article.data.updatedAt.toISOString()}</updated>`
+				: undefined,
 		})),
 		customData: `<language>ja-jp</language>`,
 	});
