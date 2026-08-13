@@ -94,7 +94,7 @@
 
 .remark-link-card-plus__image {
 	@apply m-0 h-full w-full object-cover;
-	@apply rounded-tr-(--border-radius) rounded-br-(--border-radius);
+	@apply rounded-(--border-radius);
 }
 
 /* Markdown Headers Autolink */

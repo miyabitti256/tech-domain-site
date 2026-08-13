@@ -18,80 +18,79 @@ import { remarkCustomDirectives } from "./src/plugins/remark-custom-directives.t
 import { remarkEmbeds } from "./src/plugins/remark-embeds.ts";
 import { remarkMermaidSsr } from "./src/plugins/remark-mermaid.ts";
 
+import mdx from "@astrojs/mdx";
+
 // https://astro.build/config
 export default defineConfig({
-	site: "https://tech.miyabitti.com",
-	output: "static",
-	vite: {
-		plugins: [tailwindcss()],
-	},
-	build: {
-		inlineStylesheets: "always"
-	},
+    site: "https://tech.miyabitti.com",
+    output: "static",
+    vite: {
+        plugins: [tailwindcss()],
+    },
+    build: {
+        inlineStylesheets: "always"
+    },
 
-	markdown: {
-		processor: unified({
-			remarkPlugins: [
-				remarkMermaidSsr,
-				remarkGithubAlerts,
-				remarkBreaks,
-				remarkDirective,
-				remarkCustomDirectives,
-				remarkEmbeds,
-				[remarkLinkCard, { cache: true }],
-				remarkMath,
-			],
-			rehypePlugins: [
-				rehypeSlug,
-				[
-					rehypeAutolinkHeadings,
-					{
-						behavior: "prepend",
-						properties: {
-							className: ["heading-anchor"],
-							ariaHidden: true,
-							tabIndex: -1,
-						},
-						content: { type: "text", value: "#" },
-					},
-				],
-				[
-					rehypeExternalLinks,
-					{ target: "_blank", rel: ["noopener", "noreferrer"] },
-				],
-				rehypeMathjax,
-			],
-		}),
-	},
+    markdown: {
+        processor: unified({
+            remarkPlugins: [
+                remarkMermaidSsr,
+                remarkGithubAlerts,
+                remarkBreaks,
+                remarkDirective,
+                remarkCustomDirectives,
+                remarkEmbeds,
+                [remarkLinkCard, { cache: true }],
+                remarkMath,
+            ],
+            rehypePlugins: [
+                rehypeSlug,
+                [
+                    rehypeAutolinkHeadings,
+                    {
+                        behavior: "prepend",
+                        properties: {
+                            className: ["heading-anchor"],
+                            ariaHidden: true,
+                            tabIndex: -1,
+                        },
+                        content: { type: "text", value: "#" },
+                    },
+                ],
+                [
+                    rehypeExternalLinks,
+                    { target: "_blank", rel: ["noopener", "noreferrer"] },
+                ],
+                rehypeMathjax,
+            ],
+        }),
+    },
 
-	integrations: [
-		expressiveCode({
-			themes: ["github-dark", "github-light"],
-			// ダークモードの切り替えをCSSクラス（.dark）で行うための設定
-			themeCssSelector: (theme) =>
-				theme.name === "github-dark" ? ".dark" : ":root:not(.dark)",
-		}),
-		sitemap({
-			filter: (page) =>
-				!page.includes("/search") && !page.endsWith(".md"),
-		}),
-	],
-	fonts: [
-		{
-			name: "Zen Kaku Gothic New",
-			cssVariable: "--font-zen-kaku-gothic",
-			provider: fontProviders.fontsource(),
-			weights: [300, 400, 500, 700, 900],
-			styles: ["normal"],
-			fallbacks: ["sans-serif"],
-		},
-		{
-			name: "Lilex",
-			cssVariable: "--font-lilex",
-			provider: fontProviders.fontsource(),
-			weights: [300, 400, 500, 600],
-			styles: ["normal"],
-			fallbacks: ["monospace"],
-		},
-	],
+    integrations: [expressiveCode({
+        themes: ["github-dark", "github-light"],
+        // ダークモードの切り替えをCSSクラス（.dark）で行うための設定
+        themeCssSelector: (theme) =>
+            theme.name === "github-dark" ? ".dark" : ":root:not(.dark)",
+		}), sitemap({
+        filter: (page) =>
+            !page.includes("/search") && !page.endsWith(".md"),
+		}), mdx()],
+    fonts: [
+        {
+            name: "Zen Kaku Gothic New",
+            cssVariable: "--font-zen-kaku-gothic",
+            provider: fontProviders.fontsource(),
+            weights: [300, 400, 500, 700, 900],
+            styles: ["normal"],
+            fallbacks: ["sans-serif"],
+        },
+        {
+            name: "Lilex",
+            cssVariable: "--font-lilex",
+            provider: fontProviders.fontsource(),
+            weights: [300, 400, 500, 600],
+            styles: ["normal"],
+            fallbacks: ["monospace"],
+        },
+    ],
 });
