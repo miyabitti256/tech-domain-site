@@ -3,6 +3,10 @@ dist/
 # generated types
 .astro/
 
+# cache
+.cache/*
+!.cache/mermaid/
+
 # dependencies
 node_modules/
 

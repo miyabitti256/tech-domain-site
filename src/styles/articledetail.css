@@ -421,3 +421,36 @@ a[target="_blank"]:not(
 .twitter-fallback .remark-link-card-plus__description {
 	@apply text-muted-foreground;
 }
+
+/* ── Mermaid Diagrams ───────────────────────────────── */
+.mermaid-diagram,
+pre.mermaid {
+	@apply my-8 flex w-full justify-center overflow-x-auto rounded-xl border p-4 sm:p-6 shadow-sm;
+	@apply border-border/60 bg-zinc-100/80 text-zinc-900;
+	@apply dark:border-zinc-700/50 dark:bg-zinc-200/90 dark:text-zinc-900;
+}
+
+.mermaid-diagram > svg,
+pre.mermaid > svg {
+	@apply max-w-full h-auto;
+}
+
+/* ── Reset prose styles for Mermaid diagram content ─────────────────── */
+.mermaid-diagram p,
+pre.mermaid p {
+	margin: 0 !important;
+	padding: 0 !important;
+	line-height: 1.5 !important;
+	font-size: 14px !important;
+}
+
+.mermaid-diagram foreignObject,
+pre.mermaid foreignObject {
+	overflow: visible !important;
+}
+
+.mermaid-diagram .nodeLabel,
+pre.mermaid .nodeLabel {
+	font-size: 14px !important;
+	line-height: 1.5 !important;
+}
