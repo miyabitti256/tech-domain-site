@@ -27,6 +27,7 @@ const title = "Search | miyabittiのテックブログ";
           id="search-page-input"
           class="w-full py-4 pl-14 pr-6 text-lg bg-muted/20 border border-border rounded-2xl outline-none placeholder:text-muted-foreground/50 text-foreground focus:ring-0 focus:border-foreground focus:bg-muted/30 transition-all duration-300 font-mono"
           placeholder="キーワードを入力..."
+          aria-label="検索キーワードを入力"
           autocomplete="off"
           autofocus
         />
@@ -199,7 +200,7 @@ const title = "Search | miyabittiのテックブログ";
 
       const extraTagsHtml = extraTags.length > 0
         ? `<div class="flex flex-wrap items-center gap-2 mt-auto">
-            ${extraTags.map(t => `<span class="px-2.5 py-0.5 text-[10px] font-medium tracking-wider uppercase border border-border rounded-full text-muted-foreground bg-muted/10">${t}</span>`).join('')}
+            ${extraTags.map(t => `<span class="px-2.5 py-0.5 text-xs font-medium tracking-wider uppercase border border-border rounded-full text-muted-foreground bg-muted/10">${t}</span>`).join('')}
             ${moreCount > 0 ? `<span class="text-xs text-muted-foreground">+${moreCount}</span>` : ''}
           </div>`
         : '';

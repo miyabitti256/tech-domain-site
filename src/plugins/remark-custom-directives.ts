@@ -63,8 +63,8 @@ export function remarkCustomDirectives() {
 						data: {
 							hName: "span",
 							hProperties: {
-								class:
-									"text-muted-foreground transition-transform duration-300 group-open:rotate-180",
+								class: "text-muted-foreground",
+								"data-chevron": "true",
 							},
 						},
 						children: [

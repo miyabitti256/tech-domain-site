@@ -37,14 +37,14 @@
 	}
 
 	.dark {
-		--background: #09090b;
-		--foreground: #fafafa;
+		--background: #18181b;
+		--foreground: #e4e4e7;
 		--muted: #27272a;
 		--muted-foreground: #a1a1aa;
 		--border: #27272a;
 		--primary: #f4f4f5; /* Zinc 100 (Light Gray) */
-		--primary-foreground: #09090b; /* Zinc 950 */
-		--primary-accent: #e4e4e7; /* Zinc 200 */
+		--primary-foreground: #18181b; /* Zinc 900 */
+		--primary-accent: #d4d4d8; /* Zinc 300 */
 	}
 
 	* {

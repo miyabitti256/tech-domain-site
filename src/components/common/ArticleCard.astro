@@ -38,7 +38,7 @@ const formattedUpdateDate = updatedAt
       <div class="flex flex-wrap items-center gap-x-3 gap-y-1 mb-3 text-xs text-muted-foreground">
         <time datetime={publishedAt.toISOString()}>{formattedDate}</time>
         {updatedAt && (
-          <span class="flex items-center gap-1 text-[10px] bg-muted px-1.5 py-0.5 rounded-sm">
+          <span class="flex items-center gap-1 text-xs bg-muted px-1.5 py-0.5 rounded-sm">
             更新: {formattedUpdateDate}
           </span>
         )}
@@ -61,7 +61,7 @@ const formattedUpdateDate = updatedAt
       {tags && tags.length > 1 && (
         <div class="flex flex-wrap items-center gap-2 mt-auto">
           {tags.slice(1, 4).map(tag => (
-            <span class="px-2.5 py-0.5 text-[10px] font-medium tracking-wider uppercase border border-border rounded-full text-muted-foreground bg-muted/10">
+            <span class="px-2.5 py-0.5 text-xs font-medium tracking-wider uppercase border border-border rounded-full text-muted-foreground bg-muted/10">
               {tag}
             </span>
           ))}

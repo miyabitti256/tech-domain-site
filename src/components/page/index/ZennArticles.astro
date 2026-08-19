@@ -45,7 +45,7 @@ const formatDate = (dateString: string) => {
     <div class="zenn-grid">
       {articles.map((article) => (
         <a href={article.data.link} target="_blank" rel="noopener noreferrer" class="block group">
-          <article class="flex flex-col h-full overflow-hidden transition-all duration-300 border rounded-2xl border-border bg-background/50 backdrop-blur-sm hover:shadow-lg hover:-translate-y-1">
+          <article class="flex flex-col h-full overflow-hidden transition-all duration-300 border rounded-2xl border-border bg-card text-card-foreground shadow-sm hover:shadow-lg hover:-translate-y-1">
             <div class="relative overflow-hidden aspect-1200/630 bg-muted/30">
               {article.data.imageUrl ? (
                 <img

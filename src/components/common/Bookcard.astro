@@ -56,11 +56,11 @@ const { slug, url, title, description, chaptersCount, publishedAt, coverImg } =
         <time datetime={publishedAt.toISOString()}>
           {publishedAt.toLocaleDateString("ja-JP", { year: "numeric", month: "short", day: "numeric" })}
         </time>
-        <span class="px-2 py-0.5 rounded bg-muted/80 border border-border font-mono font-medium text-[10px] text-muted-foreground">
+        <span class="px-2 py-0.5 rounded bg-muted/80 border border-border font-mono font-medium text-xs text-muted-foreground">
           {chaptersCount} Chapters
         </span>
       </div>
-      <span class="js-progress-text hidden font-mono text-[10px] font-semibold text-primary"></span>
+      <span class="js-progress-text hidden font-mono text-xs font-semibold text-primary"></span>
     </div>
 
     {/* プログレスバー */}

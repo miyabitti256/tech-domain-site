@@ -80,6 +80,13 @@ const iconMap = Object.fromEntries(
     animation-play-state: paused;
   }
 
+  @media (prefers-reduced-motion: reduce) {
+    .marquee-track {
+      animation: none;
+      overflow-x: auto;
+    }
+  }
+
   @keyframes marquee-scroll {
     0% {
       transform: translateX(0);
