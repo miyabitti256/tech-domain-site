@@ -1,0 +1,38 @@
+---
+/**
+ * グレースケールやカラーパレットのスウォッチを表示するコンポーネント
+ * 各色のoklch値、HEX値、L値を視覚的に表示する
+ */
+interface Swatch {
+  name: string;
+  oklch: string;
+  hex: string;
+  usage: string;
+}
+
+interface Props {
+  swatches: Swatch[];
+  title?: string;
+}
+
+const { swatches, title } = Astro.props;
+---
+
+<div class="not-prose my-8">
+  {title && <p class="text-sm font-semibold text-muted-foreground mb-3">{title}</p>}
+  <div class="grid grid-cols-1 gap-1.5">
+    {swatches.map((s) => (
+      <div class="flex items-stretch rounded-lg overflow-hidden border border-border/50">
+        <div
+          class="w-20 sm:w-28 shrink-0"
+          style={`background-color: ${s.oklch};`}
+        />
+        <div class="flex flex-wrap items-center gap-x-4 gap-y-0.5 px-3 py-2 bg-muted flex-1 min-w-0">
+          <span class="font-mono font-bold text-sm text-foreground w-10">{s.name}</span>
+          <code class="text-xs text-foreground/70 font-mono">{s.oklch}</code>
+          <span class="text-xs text-foreground/50 font-mono hidden sm:inline">({s.hex})</span>
+        </div>
+      </div>
+    ))}
+  </div>
+</div>

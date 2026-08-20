@@ -1,0 +1,52 @@
+---
+/**
+ * 背景色×文字色のコントラストを実際にレンダリングして体感させるコンポーネント
+ * 良い例と悪い例を横並びで表示する
+ */
+interface Example {
+  bg: string;
+  fg: string;
+  bgLabel: string;
+  fgLabel: string;
+  ratio: string;
+  pass: boolean;
+}
+
+interface Props {
+  good: Example;
+  bad: Example;
+  sampleText?: string;
+}
+
+const { good, bad, sampleText = "色彩はデザインの基盤です。適切なコントラスト比を確保することで、すべてのユーザーにとって読みやすいUIを実現できます。" } = Astro.props;
+---
+
+<div class="not-prose my-8 grid grid-cols-1 sm:grid-cols-2 gap-4">
+  {/* 悪い例 */}
+  <div class="rounded-xl border border-border/50 overflow-hidden">
+    <div class="px-3 py-1.5 bg-red-500/10 border-b border-border/50">
+      <span class="text-xs font-bold text-red-600 dark:text-red-400">❌ コントラスト不足 — {bad.ratio}</span>
+    </div>
+    <div
+      class="p-5"
+      style={`background-color: ${bad.bg}; color: ${bad.fg};`}
+    >
+      <p class="text-sm leading-relaxed mb-3">{sampleText}</p>
+      <p class="text-xs opacity-80 font-mono">背景: {bad.bgLabel} / 文字: {bad.fgLabel}</p>
+    </div>
+  </div>
+
+  {/* 良い例 */}
+  <div class="rounded-xl border border-border/50 overflow-hidden">
+    <div class="px-3 py-1.5 bg-green-500/10 border-b border-border/50">
+      <span class="text-xs font-bold text-green-600 dark:text-green-400">✅ AA準拠 — {good.ratio}</span>
+    </div>
+    <div
+      class="p-5"
+      style={`background-color: ${good.bg}; color: ${good.fg};`}
+    >
+      <p class="text-sm leading-relaxed mb-3">{sampleText}</p>
+      <p class="text-xs opacity-80 font-mono">背景: {good.bgLabel} / 文字: {good.fgLabel}</p>
+    </div>
+  </div>
+</div>

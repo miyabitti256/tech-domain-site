@@ -1,0 +1,484 @@
+---
+title: "OKLCHで設計する、コントラスト比に基づいた実践グレースケール＆同系色パレット"
+description: "OKLCHの知覚均一な明度軸を活用し、WCAG 2.xコントラスト比とAPCA Lc値の具体的な数字をもとに、見やすいグレースケール・同系色パレットを設計する方法を解説します"
+publishedAt: 2026-08-21
+tags: ["CSS", "アクセシビリティ", "デザイン"]
+---
+
+import ColorPalette from "@/components/article/ColorPalette.astro";
+import ContrastCompare from "@/components/article/ContrastCompare.astro";
+import ContrastCardDemo from "@/components/article/ContrastCardDemo.astro";
+
+## はじめに
+
+UIの色を選ぶとき、「なんとなく薄いグレー」「なんとなく濃い文字色」で済ませていませんか？
+
+背景色と文字色の組み合わせには、アクセシビリティの観点から**明確な数値基準**があります。そして、その基準を満たすパレットを「感覚」ではなく「仕組み」で設計できる色空間が**OKLCH**です。
+
+この記事では、OKLCHの知覚均一な明度（Lightness）軸を使って、コントラスト比の具体的な数値に裏付けられたグレースケールパレットを設計する方法を解説します。グレースケールだけでなく、ブルーやグリーンなど**同系色でコントラストを確保する**ためのパレット設計についても詳しく取り上げます。
+
+## OKLCHの基礎
+
+### L・C・Hの3軸
+
+[OKLCH](https://oklch.com/)は、Björn Ottosson氏が2020年に発表した[OKLab色空間](https://bottosson.github.io/posts/oklab/)の円筒座標表現で、人間の色知覚に基づいた色空間です。以下の3つの軸で色を表現します。
+
+| 軸 | 名前 | 範囲 | 説明 |
+|---|---|---|---|
+| **L** | Lightness（明度） | 0〜1 | 0が黒、1が白。**知覚的に均一**なスケール |
+| **C** | Chroma（彩度） | 0〜約0.4 | 0が無彩色（グレー）、大きいほど鮮やか |
+| **H** | Hue（色相） | 0〜360 | 色の種類（赤・青・緑など） |
+
+CSSでは [`oklch()`](https://developer.mozilla.org/ja/docs/Web/CSS/color_value/oklch) 関数で記述します。
+
+```css
+/* 明度55%、彩度0.15、色相250°（青） */
+color: oklch(0.55 0.15 250);
+
+/* グレースケール: Cを0にするだけ */
+background: oklch(0.97 0 0);
+```
+
+### なぜHSLではなくOKLCHなのか
+
+HSLにも `L`（Lightness）がありますが、HSLの明度は**知覚的に均一ではありません**。たとえば、`hsl(60, 100%, 50%)`（黄色）と`hsl(240, 100%, 50%)`（青）は同じ `L=50%` ですが、黄色のほうが圧倒的に「明るく」見えます。
+
+OKLCHの `L` は人間の知覚に基づいて設計されているため、**L値が同じなら、どの色相でも同じ明るさに見えます**。これが「知覚均一」の意味であり、パレット設計において決定的に重要な性質です。
+
+> [!NOTE]
+> OKLCHの詳細な設計背景については、作者のBjörn Ottosson氏によるブログ記事 [A perceptual color space for image processing](https://bottosson.github.io/posts/oklab/) を参照してください。また、Evil MartiansのAndrey Sitnik氏による解説記事 [OKLCH in CSS: why we moved from RGB and HSL](https://evilmartians.com/chronicles/oklch-in-css-why-quit-rgb-hsl) も非常に参考になります。
+
+## コントラスト比の基礎知識
+
+### WCAG 2.xの計算方法
+
+[WCAG 2.x](https://www.w3.org/TR/WCAG22/)では、2色間の**コントラスト比**を以下の式で定義しています（[Success Criterion 1.4.3 Contrast (Minimum)](https://www.w3.org/TR/WCAG22/#contrast-minimum)）。
+
+```
+コントラスト比 = (L1 + 0.05) / (L2 + 0.05)
+```
+
+ここで `L1` は明るい方の色の**相対輝度**、`L2` は暗い方の相対輝度です。相対輝度はsRGB値からガンマ補正を解除（リニア化）した上で、以下の係数で算出されます。
+
+```
+L = 0.2126 × R + 0.7152 × G + 0.0722 × B
+```
+
+結果は **1\:1**（同一色）から **21\:1**（純粋な白と黒）の範囲を取ります。
+
+> [!NOTE]
+> WCAG 2.xのコントラスト比計算は**sRGB色空間**に基づいています。OKLCHで設計したパレットも、最終的にはsRGBに変換してコントラスト比を検証する必要があります。計算式の詳細は [WCAG 2.2 – Relative Luminance の定義](https://www.w3.org/TR/WCAG22/#dfn-relative-luminance) を参照してください。
+
+### WCAG 2.xの閾値
+
+| 基準 | コントラスト比 | 対象 |
+|---|---|---|
+| **AA（通常テキスト）** | **4.5:1** 以上 | 本文テキスト（18pt未満） |
+| **AA（大きなテキスト）** | **3:1** 以上 | 見出し（18pt以上 or 14pt太字以上） |
+| **AAA（通常テキスト）** | **7:1** 以上 | 高コントラスト要件 |
+| **UIコンポーネント** | **3:1** 以上 | アイコン、ボーダー等（[SC 1.4.11](https://www.w3.org/TR/WCAG22/#non-text-contrast)） |
+
+### WCAG 2.xの限界
+
+WCAG 2.xのコントラスト比計算には、実務上いくつかの問題が知られています。
+
+- **ポラリティ（極性）を考慮しない** — 白背景に暗い文字と、黒背景に明るい文字では、同じコントラスト比でも読みやすさが異なる
+- **フォントサイズ・太さとの関係が粗い** — 「通常テキスト」と「大きなテキスト」の2段階しかない
+- **ダークモードでの過剰判定** — 暗い背景に中間色のテキストを組み合わせたとき、実際には十分読めるのに基準を満たさないケースがある
+
+こうした課題を解決するために提案されたのが、次に紹介するAPCAです。
+
+## APCAとは — 次世代のコントラスト評価
+
+### 概要
+
+**APCA**（Advanced Perceptual Contrast Algorithm）は、人間の視覚特性をより正確にモデル化したコントラスト評価手法です。Andrew Somers氏（Myndex）が開発し、[GitHubリポジトリ](https://github.com/Myndex/SAPC-APCA)で公開されています。WCAG 2.xの「コントラスト比」の代わりに、**Lc値**（Lightness Contrast）という指標を使います。
+
+APCAの大きな特徴は以下の3点です。
+
+1. **ポラリティを区別する** — 暗い背景×明るい文字と、明るい背景×暗い文字で計算式が異なる
+2. **フォントサイズ・太さと連動する** — 大きなフォントほど低いLcで十分と判定される
+3. **知覚ベースの計算** — OKLCHの `L` と同様に、人間の明るさ知覚に基づいている
+
+### Lc値の推奨閾値
+
+以下は [APCA Readability Criterion](https://readtech.org/ARC/) で示されている推奨値です。
+
+| 用途 | 最小Lc値 | フォント目安 |
+|---|---|---|
+| **本文テキスト（推奨）** | Lc 90 | 16px / 400 |
+| **本文テキスト（最小）** | Lc 75 | 18px / 400 |
+| **非本文テキスト** | Lc 60 | キャプション、ラベル |
+| **見出し** | Lc 45 | 36px / 400 や 24px / 700 |
+| **プレースホルダー** | Lc 30 | 補助的テキスト |
+| **非テキスト要素** | Lc 15 | 装飾的ボーダー等 |
+
+> [!IMPORTANT]
+> 2026年8月時点で、APCAは**WCAG 3.0の正式な要件ではありません**。初期ドラフトに含まれていましたが、ワーキンググループでの合意に至らず除外されています（[Adrian Roselli – "Using APCA as a WCAG 3 Failure"](https://adrianroselli.com/2022/01/using-apca-as-a-wcag-3-failure.html)）。**法的なアクセシビリティ要件を満たすには、引き続きWCAG 2.xの基準（4.5\:1 / 3\:1）に準拠する必要があります。** APCAは実務上のベストプラクティスとして、WCAG 2.xと併用するのが現実的です。
+
+## OKLCHで設計するグレースケールパレット
+
+ここからが本題です。OKLCHの `L` 軸を使って、コントラスト比が検証された実用的なグレースケールパレットを設計します。
+
+### パレット定義
+
+グレースケールでは `C = 0`（無彩色）なので、**`L` の値だけでパレット全体が決まります**。以下は、[Tailwind CSS v4のカラーパレット](https://tailwindcss.com/docs/colors)を参考にした11段階のパレットです。
+
+<ColorPalette
+  title="グレースケールパレット（C = 0）"
+  swatches={[
+    { name: "50",  oklch: "oklch(0.97 0 0)", hex: "#f5f5f5", usage: "ページ背景" },
+    { name: "100", oklch: "oklch(0.93 0 0)", hex: "#e8e8e8", usage: "カード背景、バッジ" },
+    { name: "200", oklch: "oklch(0.87 0 0)", hex: "#d4d4d4", usage: "ボーダー、区切り線" },
+    { name: "300", oklch: "oklch(0.78 0 0)", hex: "#b7b7b7", usage: "無効状態、プレースホルダー" },
+    { name: "400", oklch: "oklch(0.68 0 0)", hex: "#989898", usage: "補助テキスト、アイコン" },
+    { name: "500", oklch: "oklch(0.55 0 0)", hex: "#717171", usage: "中間要素" },
+    { name: "600", oklch: "oklch(0.45 0 0)", hex: "#555555", usage: "強調されたUI要素" },
+    { name: "700", oklch: "oklch(0.37 0 0)", hex: "#404040", usage: "見出し" },
+    { name: "800", oklch: "oklch(0.27 0 0)", hex: "#262626", usage: "ダークUI" },
+    { name: "900", oklch: "oklch(0.21 0 0)", hex: "#181818", usage: "本文テキスト、ダーク背景" },
+    { name: "950", oklch: "oklch(0.14 0 0)", hex: "#090909", usage: "最も暗い背景" },
+  ]}
+/>
+
+### コントラスト比の検証
+
+このパレットから代表的な背景色×文字色の組み合わせを取り、WCAG 2.xの基準で検証した結果が以下です。
+
+#### ライトモード
+
+| 組み合わせ | コントラスト比 | AA通常 | AA大 | AAA |
+|---|---|---|---|---|
+| 背景50 × テキスト900 | **16.24:1** | ✅ | ✅ | ✅ |
+| 背景50 × テキスト800 | **13.82:1** | ✅ | ✅ | ✅ |
+| 背景50 × テキスト700 | **9.56:1** | ✅ | ✅ | ✅ |
+| 背景50 × テキスト600 | **6.82:1** | ✅ | ✅ | ❌ |
+| 背景50 × テキスト500 | **4.45:1** | ❌ | ✅ | ❌ |
+| 背景50 × テキスト400 | **2.64:1** | ❌ | ❌ | ❌ |
+| カード100 × テキスト900 | **14.42:1** | ✅ | ✅ | ✅ |
+| カード100 × テキスト700 | **8.49:1** | ✅ | ✅ | ✅ |
+| 背景200 × テキスト900 | **11.96:1** | ✅ | ✅ | ✅ |
+
+#### ダークモード
+
+| 組み合わせ | コントラスト比 | AA通常 | AA大 | AAA |
+|---|---|---|---|---|
+| 背景950 × テキスト50 | **18.25:1** | ✅ | ✅ | ✅ |
+| 背景950 × テキスト100 | **16.20:1** | ✅ | ✅ | ✅ |
+| 背景950 × テキスト200 | **13.43:1** | ✅ | ✅ | ✅ |
+| 背景950 × テキスト300 | **9.95:1** | ✅ | ✅ | ✅ |
+| 背景950 × テキスト400 | **6.91:1** | ✅ | ✅ | ❌ |
+| カード900 × テキスト50 | **16.24:1** | ✅ | ✅ | ✅ |
+| カード900 × テキスト100 | **14.42:1** | ✅ | ✅ | ✅ |
+| カード800 × テキスト100 | **12.26:1** | ✅ | ✅ | ✅ |
+
+### 実際に見て比較する
+
+テーブルの数字だけではわかりにくいので、実際のレンダリングで確認しましょう。
+
+#### テキストのコントラスト比較
+
+<ContrastCompare
+  bad={{
+    bg: "oklch(0.97 0 0)",
+    fg: "oklch(0.68 0 0)",
+    bgLabel: "Gray-50 (L=0.97)",
+    fgLabel: "Gray-400 (L=0.68)",
+    ratio: "2.64:1",
+    pass: false,
+  }}
+  good={{
+    bg: "oklch(0.97 0 0)",
+    fg: "oklch(0.21 0 0)",
+    bgLabel: "Gray-50 (L=0.97)",
+    fgLabel: "Gray-900 (L=0.21)",
+    ratio: "16.24:1",
+    pass: true,
+  }}
+/>
+
+<ContrastCompare
+  bad={{
+    bg: "oklch(0.97 0 0)",
+    fg: "oklch(0.55 0 0)",
+    bgLabel: "Gray-50 (L=0.97)",
+    fgLabel: "Gray-500 (L=0.55)",
+    ratio: "4.45:1 — AA未達",
+    pass: false,
+  }}
+  good={{
+    bg: "oklch(0.97 0 0)",
+    fg: "oklch(0.45 0 0)",
+    bgLabel: "Gray-50 (L=0.97)",
+    fgLabel: "Gray-600 (L=0.45)",
+    ratio: "6.82:1 — AA達成",
+    pass: true,
+  }}
+  sampleText="Gray-500（L=0.55）はAA通常をわずかに下回る4.45:1。1ステップ暗い600（L=0.45）にするだけで6.82:1まで改善されます。"
+/>
+
+#### ダークモードの比較
+
+<ContrastCompare
+  bad={{
+    bg: "oklch(0.14 0 0)",
+    fg: "oklch(0.45 0 0)",
+    bgLabel: "Gray-950 (L=0.14)",
+    fgLabel: "Gray-600 (L=0.45)",
+    ratio: "2.82:1",
+    pass: false,
+  }}
+  good={{
+    bg: "oklch(0.14 0 0)",
+    fg: "oklch(0.93 0 0)",
+    bgLabel: "Gray-950 (L=0.14)",
+    fgLabel: "Gray-100 (L=0.93)",
+    ratio: "16.20:1",
+    pass: true,
+  }}
+/>
+
+#### カード型UIでの比較
+
+<ContrastCardDemo
+  bad={{
+    bg: "#f5f5f5",
+    cardBg: "#e8e8e8",
+    fg: "#b7b7b7",
+    mutedFg: "#d4d4d4",
+    borderColor: "#e8e8e8",
+    label: "Gray-300 × Gray-200 — 読めない",
+    pass: false,
+  }}
+  good={{
+    bg: "#f5f5f5",
+    cardBg: "#ffffff",
+    fg: "#181818",
+    mutedFg: "#555555",
+    borderColor: "#d4d4d4",
+    label: "Gray-900 × Gray-600 — はっきり読める",
+    pass: true,
+  }}
+/>
+
+### テーブルから読み取れるポイント
+
+1. **本文テキストにはL差0.7以上を確保する** — 背景50（L=0.97）× テキスト900（L=0.21）のL差は0.76で、コントラスト比は16.24:1。余裕をもってAAAを達成
+2. **500番がAA通常の境界線** — 背景50 × 500（L=0.55）は4.45:1でAA通常をわずかに下回る。**本文テキストに使うなら600以上（L=0.45以下）が安全**
+3. **400番以下はテキストに使わない** — 背景50 × 400は2.64:1。AA大（3:1）すら満たさないため、装飾やプレースホルダー限定
+4. **ダークモードでは400番が有用** — 背景950 × 400は6.91:1でAA通常を大きく超える。ダークモードの補助テキストとして十分機能する
+
+### CSS Custom Propertiesでの実装
+
+```css
+:root {
+  /* グレースケールパレット */
+  --gray-50:  oklch(0.97 0 0);
+  --gray-100: oklch(0.93 0 0);
+  --gray-200: oklch(0.87 0 0);
+  --gray-300: oklch(0.78 0 0);
+  --gray-400: oklch(0.68 0 0);
+  --gray-500: oklch(0.55 0 0);
+  --gray-600: oklch(0.45 0 0);
+  --gray-700: oklch(0.37 0 0);
+  --gray-800: oklch(0.27 0 0);
+  --gray-900: oklch(0.21 0 0);
+  --gray-950: oklch(0.14 0 0);
+
+  /* セマンティックトークン（ライトモード） */
+  --color-bg:         var(--gray-50);
+  --color-bg-card:    var(--gray-100);
+  --color-border:     var(--gray-200);
+  --color-text-muted: var(--gray-500);
+  --color-text:       var(--gray-900);
+  --color-text-heading: var(--gray-800);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg:         var(--gray-950);
+    --color-bg-card:    var(--gray-900);
+    --color-border:     var(--gray-800);
+    --color-text-muted: var(--gray-400);
+    --color-text:       var(--gray-100);
+    --color-text-heading: var(--gray-50);
+  }
+}
+```
+
+ポイントは、プリミティブトークン（`--gray-XXX`）とセマンティックトークン（`--color-text` 等）を分離することです。ダークモードではセマンティックトークンの参照先を入れ替えるだけで、コントラスト比を維持したまま配色を反転できます。
+
+## グレースケールを超えて — 同系色パレットの設計法
+
+ここまではグレースケール（C=0）の話でした。実際のUIでは、ブランドカラーに基づいた**同系色パレット**が必要になります。
+
+### 原則：Lの差でコントラストを確保する
+
+同系色パレットでも、コントラスト比を決定するのは**明度の差**です。色相（H）を固定し、彩度（C）を持たせたまま、`L` 値の段階を設計すれば、グレースケールと同じロジックでコントラストを確保できます。
+
+これがOKLCHの最大の強みです。**色相を自由に変えても、L値の差を同じに保てば、ほぼ同じコントラスト比が得られます。**
+
+### 彩度カーブの設計
+
+彩度（C）を全ステップで一定にすると、明度の高い色（50番台）と低い色（900番台）が不自然に鮮やかになります。人間の目は、極端に明るい色や暗い色の彩度を知覚しにくいためです。
+
+推奨される彩度カーブは**山型**で、中間の明度で最大になり、両端に向かって小さくなるのが自然です。[Huetone](https://huetone.ardov.me/)などのツールを使うと視覚的に確認しながら設計できます。
+
+```
+C
+0.15 |         ●
+0.12 |       ●   ●
+0.09 |     ●       ●
+0.06 |   ●           ●
+0.04 | ●               ●
+0.02 |●                   ●
+0.01 ●                     ●
+     ┗━━━━━━━━━━━━━━━━━━━━━━━
+      50 100 200 300 400 500 600 700 800 900 950
+```
+
+### ブルー系パレットの具体例
+
+色相 `H = 250`（青）でパレットを組んだ場合の具体例です。
+
+<ColorPalette
+  title="ブルー系パレット（H = 250）"
+  swatches={[
+    { name: "50",  oklch: "oklch(0.97 0.01 250)", hex: "#f0f6fc", usage: "ページ背景" },
+    { name: "100", oklch: "oklch(0.93 0.02 250)", hex: "#dee9f5", usage: "カード背景" },
+    { name: "200", oklch: "oklch(0.87 0.04 250)", hex: "#c1d7ee", usage: "ボーダー" },
+    { name: "300", oklch: "oklch(0.78 0.08 250)", hex: "#90bce9", usage: "バッジ背景" },
+    { name: "400", oklch: "oklch(0.68 0.12 250)", hex: "#5b9ddf", usage: "補助テキスト" },
+    { name: "500", oklch: "oklch(0.55 0.15 250)", hex: "#0f74c5", usage: "プライマリボタン" },
+    { name: "600", oklch: "oklch(0.45 0.14 250)", hex: "#00569f", usage: "ホバー状態" },
+    { name: "700", oklch: "oklch(0.37 0.12 250)", hex: "#00407c", usage: "見出しテキスト" },
+    { name: "800", oklch: "oklch(0.27 0.09 250)", hex: "#002750", usage: "ダークUI" },
+    { name: "900", oklch: "oklch(0.21 0.06 250)", hex: "#001932", usage: "テキスト" },
+    { name: "950", oklch: "oklch(0.14 0.04 250)", hex: "#000919", usage: "最暗背景" },
+  ]}
+/>
+
+### 同系色でもコントラスト比はほぼ同じ
+
+このブルー系パレットのコントラスト比を検証すると、グレースケールとほぼ同じ数値が得られます。
+
+| 組み合わせ | コントラスト比 | AA通常 | AA大 |
+|---|---|---|---|
+| Blue-50 × Blue-900 | **16.26:1** | ✅ | ✅ |
+| Blue-50 × Blue-700 | **9.49:1** | ✅ | ✅ |
+| Blue-950 × Blue-100 | **16.23:1** | ✅ | ✅ |
+| Blue-950 × Blue-200 | **13.48:1** | ✅ | ✅ |
+
+グレースケールの同等ペア（Gray-50 × Gray-900 = 16.24:1）と比較すると、**L値を揃えている限り、色相や彩度を変えてもコントラスト比はほぼ変わりません**。これがOKLCHの知覚均一性の実証です。
+
+#### ブルー系での実際のレンダリング
+
+<ContrastCompare
+  bad={{
+    bg: "oklch(0.97 0.01 250)",
+    fg: "oklch(0.68 0.12 250)",
+    bgLabel: "Blue-50 (L=0.97)",
+    fgLabel: "Blue-400 (L=0.68)",
+    ratio: "2.64:1",
+    pass: false,
+  }}
+  good={{
+    bg: "oklch(0.97 0.01 250)",
+    fg: "oklch(0.21 0.06 250)",
+    bgLabel: "Blue-50 (L=0.97)",
+    fgLabel: "Blue-900 (L=0.21)",
+    ratio: "16.26:1",
+    pass: true,
+  }}
+  sampleText="同系色でも、L値の差を十分に確保すれば読みやすいテキストを実現できます。色相を統一したブランドカラーパレットでも、アクセシビリティは両立可能です。"
+/>
+
+### 同系色パレット設計のチェックリスト
+
+1. **L値の段階はグレースケールと同じにする** — パレットの骨格はLで決まる。グレースケールで検証済みのL値をそのまま流用できる
+2. **彩度は山型カーブにする** — 中間明度（400〜600）で最大、両端で最小
+3. **ガモットの上限に注意する** — OKLCHは[P3](https://developer.mozilla.org/en-US/docs/Web/CSS/@media/color-gamut)やRec.2020などの広色域を表現できるが、sRGBの範囲外になる色は、一般的なモニターで**クランプ（丸め込み）**される。特に高彩度かつ高明度の色（鮮やかな黄色やシアン等）は注意が必要
+4. **最終確認はsRGB変換後のコントラスト比で行う** — OKLCHで設計しても、WCAG 2.xの基準はsRGBベース。ツールで変換・検証を行うこと
+
+## 実践テクニック
+
+### color-mix() による動的調整
+
+CSS [`color-mix()`](https://developer.mozilla.org/ja/docs/Web/CSS/color_value/color-mix) を使えば、パレット外の中間色を動的に生成できます。
+
+```css
+/* gray-100とgray-200の中間色 */
+border-color: color-mix(in oklch, var(--gray-100), var(--gray-200));
+
+/* 白を40%混ぜて明るくする */
+background: color-mix(in oklch, var(--blue-500), white 40%);
+```
+
+`in oklch` を指定することで、OKLCHの知覚均一な空間で補間が行われます。`in srgb` と比較すると、中間色が「泥っぽく」ならない利点があります。
+
+### 相対カラー構文
+
+[CSS相対カラー構文（Relative Color Syntax）](https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_colors/Relative_colors)を使えば、既存の色の `L` だけを変更するといった操作も可能です。
+
+```css
+/* ベースカラーの明度だけを0.2に変更 */
+--dark-variant: oklch(from var(--brand-color) 0.2 c h);
+
+/* 明度を20%下げる */
+--darker: oklch(from var(--brand-color) calc(l - 0.2) c h);
+```
+
+### ダークモードの設計パターン
+
+グレースケールパレットの場合、ダークモードでは**Lの対応を反転**させるだけで切り替えが可能です。
+
+| ライトモード | 用途 | ダークモード |
+|---|---|---|
+| 50 (L=0.97) | 背景 | 950 (L=0.14) |
+| 100 (L=0.93) | カード背景 | 900 (L=0.21) |
+| 200 (L=0.87) | ボーダー | 800 (L=0.27) |
+| 900 (L=0.21) | テキスト | 100 (L=0.93) |
+
+ただし、**完全な反転ではなくコントラスト比を基準に調整する**のが重要です。ダークモードではまぶしさを抑えるため、テキストに純白（L=1.0）ではなく、少しLを下げた50番（L=0.97）や100番（L=0.93）を使うのが一般的です。
+
+### フォールバック
+
+OKLCHは[主要なモダンブラウザでサポート](https://caniuse.com/mdn-css_types_color_oklch)されていますが、古いブラウザ向けにフォールバックを提供する場合は `@supports` を活用します。
+
+```css
+:root {
+  /* フォールバック（sRGB） */
+  --gray-900: #181818;
+
+  /* OKLCH対応ブラウザ向け */
+  @supports (color: oklch(0 0 0)) {
+    --gray-900: oklch(0.21 0 0);
+  }
+}
+```
+
+## まとめ
+
+OKLCHの `L` 軸が知覚均一であるという性質は、パレット設計を「感覚」から「仕組み」に変えてくれます。
+
+押さえておくべきポイントをまとめます。
+
+- **グレースケールは `C = 0` でLだけの設計** — シンプルで、コントラスト比の予測が容易
+- **本文テキストにはLの差を0.7以上確保** — WCAG 2.x AA（4.5:1）を十分に超え、AAA（7:1）も視野に入る
+- **500番（L=0.55）がAA通常の境界線** — 明るい背景（L≧0.93）に対して、本文テキストには600番以上（L≦0.45）を使う
+- **同系色でもL値を揃えればコントラスト比はほぼ同じ** — OKLCHの知覚均一性の恩恵で、色相を変えてもパレットの骨格を使い回せる
+- **彩度は山型カーブにする** — 中間明度で最大、両端で最小が自然
+- **WCAG 2.xで検証し、APCAで微調整する** — 法的準拠はWCAG 2.x、実際の読みやすさはAPCAで確認するのが現実的
+
+### 参考リンク
+
+- [OKLCH Color Picker & Converter](https://oklch.com/) — OKLCHの色選び・変換ツール
+- [Huetone](https://huetone.ardov.me/) — OKLCHベースのパレット生成ツール
+- [WCAG 2.2 — W3C Recommendation](https://www.w3.org/TR/WCAG22/) — アクセシビリティガイドラインの仕様書
+- [APCA Contrast Calculator](https://apcacontrast.com/) — APCAのコントラスト計算ツール
+- [APCA Readability Criterion (ARC)](https://readtech.org/ARC/) — APCAの推奨基準
+- [A perceptual color space for image processing (Björn Ottosson)](https://bottosson.github.io/posts/oklab/) — OKLab/OKLCHの原論文
+- [OKLCH in CSS: why we moved from RGB and HSL (Evil Martians)](https://evilmartians.com/chronicles/oklch-in-css-why-quit-rgb-hsl) — OKLCHの実践的な解説
+- [MDN — oklch()](https://developer.mozilla.org/ja/docs/Web/CSS/color_value/oklch) — CSSリファレンス
+
+色選びに迷ったとき、OKLCH Lightness値とコントラスト比のテーブルが、確信を持った判断の助けになれば幸いです。

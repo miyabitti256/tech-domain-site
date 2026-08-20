@@ -1,0 +1,58 @@
+---
+/**
+ * カード型UIのコントラスト比較デモ
+ * 実際のUIコンポーネント（カード）がコントラストによってどう見えるかを体験させる
+ */
+interface CardExample {
+  bg: string;
+  cardBg: string;
+  fg: string;
+  mutedFg: string;
+  borderColor: string;
+  label: string;
+  pass: boolean;
+}
+
+interface Props {
+  good: CardExample;
+  bad: CardExample;
+}
+
+const { good, bad } = Astro.props;
+---
+
+<div class="not-prose my-8 grid grid-cols-1 sm:grid-cols-2 gap-4">
+  {/* 悪い例 */}
+  <div class="rounded-xl border border-border/50 overflow-hidden">
+    <div class="px-3 py-1.5 bg-red-500/10 border-b border-border/50">
+      <span class="text-xs font-bold text-red-600 dark:text-red-400">❌ {bad.label}</span>
+    </div>
+    <div class="p-4" style={`background-color: ${bad.bg};`}>
+      <div class="rounded-lg p-4" style={`background-color: ${bad.cardBg}; border: 1px solid ${bad.borderColor};`}>
+        <p class="text-base font-bold mb-1" style={`color: ${bad.fg};`}>記事タイトル</p>
+        <p class="text-sm mb-3" style={`color: ${bad.mutedFg};`}>この記事の説明文です。コントラスト比が不十分だと、テキストが背景に溶け込んでしまいます。</p>
+        <div class="flex items-center gap-2">
+          <span class="text-xs px-2 py-0.5 rounded-full" style={`color: ${bad.mutedFg}; border: 1px solid ${bad.borderColor};`}>#CSS</span>
+          <span class="text-xs" style={`color: ${bad.mutedFg};`}>2026年8月21日</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {/* 良い例 */}
+  <div class="rounded-xl border border-border/50 overflow-hidden">
+    <div class="px-3 py-1.5 bg-green-500/10 border-b border-border/50">
+      <span class="text-xs font-bold text-green-600 dark:text-green-400">✅ {good.label}</span>
+    </div>
+    <div class="p-4" style={`background-color: ${good.bg};`}>
+      <div class="rounded-lg p-4" style={`background-color: ${good.cardBg}; border: 1px solid ${good.borderColor};`}>
+        <p class="text-base font-bold mb-1" style={`color: ${good.fg};`}>記事タイトル</p>
+        <p class="text-sm mb-3" style={`color: ${good.mutedFg};`}>この記事の説明文です。十分なコントラスト比が確保されていると、テキストがはっきり読めます。</p>
+        <div class="flex items-center gap-2">
+          <span class="text-xs px-2 py-0.5 rounded-full" style={`color: ${good.mutedFg}; border: 1px solid ${good.borderColor};`}>#CSS</span>
+          <span class="text-xs" style={`color: ${good.mutedFg};`}>2026年8月21日</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
