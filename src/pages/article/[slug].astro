@@ -118,8 +118,8 @@ const isDev = import.meta.env.DEV;
     </script>
   )}
 
-  <main class="py-8">
-    <article class="px-6 mx-auto max-w-3xl">
+  <div class="py-8">
+    <div class="px-6 mx-auto max-w-3xl xl:max-w-6xl">
       <div class="mb-8">
         <Breadcrumb>
           <BreadcrumbList>
@@ -138,98 +138,109 @@ const isDev = import.meta.env.DEV;
         </Breadcrumb>
       </div>
 
-      <header class="mb-12">
-        <div class="flex flex-wrap items-center gap-x-4 gap-y-2 mb-6 text-sm text-muted-foreground">
-          <time datetime={publishedAt.toISOString()}>{formattedDate}</time>
-          {updatedAt && (
-            <div class="flex items-center gap-1.5 list-none">
-              <RefreshCcw class="w-4 h-4" />
-              <time datetime={updatedAt.toISOString()}>{formattedUpdateDate}</time>
+      <div class="xl:grid xl:grid-cols-[minmax(0,1fr)_260px] xl:gap-12 items-start">
+        <article class="min-w-0 max-w-3xl w-full article-paper-sheet">
+          <header class="mb-10">
+            <div class="flex flex-wrap items-center gap-x-4 gap-y-2 mb-4 text-sm text-muted-foreground">
+              <time datetime={publishedAt.toISOString()}>{formattedDate}</time>
+              {updatedAt && (
+                <div class="flex items-center gap-1.5 list-none">
+                  <RefreshCcw class="w-4 h-4" />
+                  <time datetime={updatedAt.toISOString()}>{formattedUpdateDate}</time>
+                </div>
+              )}
+              {tags && tags.length > 0 && (
+                <>
+                  <span>&bull;</span>
+                  <div class="flex flex-wrap gap-2">
+                    {tags.map((tag: string) => (
+                      <Badge href={`/search?tag=${encodeURIComponent(tag)}`} variant="outline">
+                        <span class="mr-0.5 text-muted-foreground">#</span>{tag}
+                      </Badge>
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
-          )}
-          {tags && tags.length > 0 && (
-            <>
-              <span>&bull;</span>
-              <div class="flex flex-wrap gap-2">
-                {tags.map((tag: string) => (
-                  <Badge href={`/search?tag=${encodeURIComponent(tag)}`} variant="outline">
-                    <span class="mr-0.5 text-muted-foreground">#</span>{tag}
-                  </Badge>
-                ))}
+
+            <h1 class="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-foreground mb-4 leading-snug">
+              {title}
+            </h1>
+
+            {image && (
+              <div class="mb-8 overflow-hidden rounded-2xl border border-border/40">
+                <img src={image} alt={title} class="w-full h-auto object-cover aspect-video" fetchpriority="high" />
               </div>
-            </>
+            )}
+
+            <p class="text-base sm:text-lg text-muted-foreground leading-relaxed">
+              {description}
+            </p>
+          </header>
+
+          {headings && headings.length > 0 && (
+            <TableOfContents headings={headings} variant="accordion" />
           )}
-        </div>
 
-        <h1 class="text-4xl md:text-5xl font-bold tracking-tight text-foreground mb-6 leading-[1.15]">
-          {title}
-        </h1>
+          <Prose>
+            <Content />
+          </Prose>
 
-        {image && (
-          <div class="mb-16 overflow-hidden rounded-3xl">
-            <img src={image} alt={title} class="w-full h-auto object-cover aspect-video" fetchpriority="high" />
-          </div>
-        )}
-
-        <p class="text-xl text-muted-foreground leading-relaxed">
-          {description}
-        </p>
-      </header>
-
-      {headings && headings.length > 0 && (
-        <TableOfContents headings={headings} />
-      )}
-
-      <Prose>
-        <Content />
-      </Prose>
-
-      <footer class="mt-12 border-t border-border">
-        <div class="py-8">        
-          <AuthorCard />
-        </div>
-        <PrevNextNav
-          prev={prev ? { href: `/article/${prev.id}`, label: "前の記事", title: prev.data.title } : null}
-          next={next ? { href: `/article/${next.id}`, label: "次の記事", title: next.data.title } : null}
-          prevPlaceholder="前の記事はありません"
-          nextPlaceholder="次の記事はありません"
-        />
-
-        {/* Related Articles */}
-        {related && related.length > 0 && (
-          <div class="mb-12">
-            <h3 class="text-2xl font-bold mb-6">関連記事</h3>
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {related.map((rel: any) => (
-                <a href={`/article/${rel.id}`} class="group flex flex-col gap-3">
-                  <div class="overflow-hidden rounded-xl border border-border aspect-video bg-muted/30">
-                    <img 
-                      src={rel.data.image || `/ogp/article/${rel.id}.webp`} 
-                      alt={rel.data.title} 
-                      class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
-                      loading="lazy" 
-                    />
-                  </div>
-                  <div>
-                    <h4 class="font-bold text-foreground line-clamp-2 group-hover:text-primary transition-colors">{rel.data.title}</h4>
-                    <p class="text-xs text-muted-foreground mt-1 flex items-center gap-2">
-                      <time datetime={rel.data.publishedAt.toISOString()}>
-                        {new Date(rel.data.publishedAt).toLocaleDateString("ja-JP", { year: "numeric", month: "short", day: "numeric" })}
-                      </time>
-                    </p>
-                  </div>
-                </a>
-              ))}
+          <footer class="mt-12 border-t border-border">
+            <div class="py-8">        
+              <AuthorCard />
             </div>
-          </div>
-        )}
+            <PrevNextNav
+              prev={prev ? { href: `/article/${prev.id}`, label: "前の記事", title: prev.data.title } : null}
+              next={next ? { href: `/article/${next.id}`, label: "次の記事", title: next.data.title } : null}
+              prevPlaceholder="前の記事はありません"
+              nextPlaceholder="次の記事はありません"
+            />
 
-        <div class="text-center">
-          <a href="/article" class="inline-flex items-center justify-center px-6 py-3 text-sm font-bold text-foreground bg-muted/50 rounded-xl hover:bg-muted transition-colors">
-            &larr; すべての記事を見る
-          </a>
-        </div>
-      </footer>
-    </article>
-  </main>
+            {/* Related Articles */}
+            {related && related.length > 0 && (
+              <div class="mb-12">
+                <h3 class="text-2xl font-bold mb-6">関連記事</h3>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {related.map((rel: any) => (
+                    <a href={`/article/${rel.id}`} class="group flex flex-col gap-3">
+                      <div class="overflow-hidden rounded-xl border border-border aspect-video bg-muted/30">
+                        <img 
+                          src={rel.data.image || `/ogp/article/${rel.id}.webp`} 
+                          alt={rel.data.title} 
+                          class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
+                          loading="lazy" 
+                        />
+                      </div>
+                      <div>
+                        <h4 class="font-bold text-foreground line-clamp-2 group-hover:text-primary transition-colors">{rel.data.title}</h4>
+                        <p class="text-xs text-muted-foreground mt-1 flex items-center gap-2">
+                          <time datetime={rel.data.publishedAt.toISOString()}>
+                            {new Date(rel.data.publishedAt).toLocaleDateString("ja-JP", { year: "numeric", month: "short", day: "numeric" })}
+                          </time>
+                        </p>
+                      </div>
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div class="text-center">
+              <a href="/article" class="inline-flex items-center justify-center px-6 py-3 text-sm font-bold text-foreground bg-muted/50 rounded-xl hover:bg-muted transition-colors">
+                &larr; すべての記事を見る
+              </a>
+            </div>
+          </footer>
+        </article>
+
+        {/* デスクトップ用 Sticky 目次サイドバー */}
+        {headings && headings.length > 0 && (
+          <aside class="hidden xl:block sticky top-24 pl-2">
+            <TableOfContents headings={headings} variant="sticky" />
+          </aside>
+        )}
+      </div>
+    </div>
+  </div>
 </Layout>

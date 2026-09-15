@@ -4,18 +4,18 @@
  * 実際のUIコンポーネント（カード）がコントラストによってどう見えるかを体験させる
  */
 interface CardExample {
-  bg: string;
-  cardBg: string;
-  fg: string;
-  mutedFg: string;
-  borderColor: string;
-  label: string;
-  pass: boolean;
+	bg: string;
+	cardBg: string;
+	fg: string;
+	mutedFg: string;
+	borderColor: string;
+	label: string;
+	pass: boolean;
 }
 
 interface Props {
-  good: CardExample;
-  bad: CardExample;
+	good: CardExample;
+	bad: CardExample;
 }
 
 const { good, bad } = Astro.props;

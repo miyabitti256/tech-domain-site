@@ -4,15 +4,15 @@
  * 各色のoklch値、HEX値、L値を視覚的に表示する
  */
 interface Swatch {
-  name: string;
-  oklch: string;
-  hex: string;
-  usage: string;
+	name: string;
+	oklch: string;
+	hex: string;
+	usage: string;
 }
 
 interface Props {
-  swatches: Swatch[];
-  title?: string;
+	swatches: Swatch[];
+	title?: string;
 }
 
 const { swatches, title } = Astro.props;

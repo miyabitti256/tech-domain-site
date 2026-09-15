@@ -3,58 +3,107 @@ import type { MarkdownHeading } from "astro";
 
 export interface Props {
 	headings: MarkdownHeading[];
+	variant?: "accordion" | "sticky";
 }
 
-const { headings } = Astro.props;
+const { headings, variant = "accordion" } = Astro.props;
 // Limit depth to h2 and h3
 const filteredHeadings = headings.filter(
 	(heading) => heading.depth > 1 && heading.depth <= 3,
 );
+
+if (filteredHeadings.length === 0) {
+	return null;
+}
 ---
 
-<details
-  class="toc border-border/60 bg-muted/20 group mt-8 mb-12 rounded-lg border overflow-hidden"
->
-  <summary
-    class="text-foreground flex cursor-pointer list-none items-center justify-between px-5 py-4 text-sm font-bold [&::-webkit-details-marker]:hidden select-none"
-  >
-    目次
-    <span data-chevron class="text-muted-foreground">
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="16"
-        height="16"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-        stroke-linecap="round"
-        stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg
-      >
-    </span>
-  </summary>
-  <div class="toc-content">
-    <div class="border-border/50 border-t p-5 px-5">
-      <ul class="space-y-3">
-        {
-          filteredHeadings.map((heading) => (
-            <li
-              class="line-clamp-1"
-              style={`margin-left: ${(heading.depth - 2) * 1.25}rem;`}
-            >
+{
+  variant === "accordion" && (
+    <details class="toc border-border/60 bg-muted/20 group my-8 rounded-lg border overflow-hidden xl:hidden">
+      <summary class="text-foreground flex cursor-pointer list-none items-center justify-between px-5 py-3.5 text-sm font-bold [&::-webkit-details-marker]:hidden select-none">
+        目次
+        <span data-chevron class="text-muted-foreground">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="m6 9 6 6 6-6" />
+          </svg>
+        </span>
+      </summary>
+      <div class="toc-content">
+        <div class="border-border/50 border-t p-4 px-5">
+          <ul class="space-y-2">
+            {filteredHeadings.map((heading) => (
+              <li
+                class="line-clamp-1"
+                style={`margin-left: ${(heading.depth - 2) * 1}rem;`}
+              >
+                <a
+                  href={`#${heading.slug}`}
+                  class="text-muted-foreground hover:text-primary hover:border-primary block border-l-2 border-transparent py-0.5 pl-2 text-sm transition-colors"
+                >
+                  {heading.text.replace(/^#\s*/, "")}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    </details>
+  )
+}
+
+{
+  variant === "sticky" && (
+    <nav aria-label="目次" class="toc-desktop flex flex-col max-h-[calc(100vh-8rem)]">
+      <div class="mb-3 flex items-center gap-2 font-bold text-sm tracking-wide text-foreground shrink-0 select-none">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          class="text-muted-foreground"
+        >
+          <line x1="8" y1="6" x2="21" y2="6" />
+          <line x1="8" y1="12" x2="21" y2="12" />
+          <line x1="8" y1="18" x2="21" y2="18" />
+          <line x1="3" y1="6" x2="3.01" y2="6" />
+          <line x1="3" y1="12" x2="3.01" y2="12" />
+          <line x1="3" y1="18" x2="3.01" y2="18" />
+        </svg>
+        <span>目次</span>
+      </div>
+      <div class="toc-scroll-area overflow-y-auto pr-1">
+        <ul class="space-y-0.5">
+          {filteredHeadings.map((heading) => (
+            <li style={`padding-left: ${(heading.depth - 2) * 0.75}rem;`}>
               <a
                 href={`#${heading.slug}`}
-                class="text-muted-foreground hover:text-primary hover:border-primary block border-l-2 border-transparent py-0.5 pl-2 text-sm transition-colors"
+                class="toc-desktop-link line-clamp-1"
+                data-toc-target={heading.slug}
               >
                 {heading.text.replace(/^#\s*/, "")}
               </a>
             </li>
-          ))
-        }
-      </ul>
-    </div>
-  </div>
-</details>
+          ))}
+        </ul>
+      </div>
+    </nav>
+  )
+}
 
 <style>
   .toc {
@@ -69,6 +118,84 @@ const filteredHeadings = headings.filter(
 <script>
   import { initDetailsAccordions } from "@/utils/accordion";
 
+  function initTocHighlight() {
+    const links = document.querySelectorAll<HTMLAnchorElement>(".toc-desktop-link");
+    if (links.length === 0) return;
+
+    const headingElements: HTMLElement[] = [];
+    links.forEach((link) => {
+      const slug = link.getAttribute("data-toc-target");
+      if (slug) {
+        const el = document.getElementById(slug);
+        if (el) headingElements.push(el);
+      }
+    });
+
+    if (headingElements.length === 0) return;
+
+    let lastActiveId = "";
+
+    function updateActiveLink() {
+      const threshold = 120;
+      let currentHeading = headingElements[0];
+
+      for (const heading of headingElements) {
+        const top = heading.getBoundingClientRect().top;
+        if (top <= threshold) {
+          currentHeading = heading;
+        } else {
+          break;
+        }
+      }
+
+      if (!currentHeading) return;
+      const activeId = currentHeading.id;
+
+      if (activeId !== lastActiveId) {
+        lastActiveId = activeId;
+
+        let activeLinkEl: HTMLAnchorElement | null = null;
+        links.forEach((link) => {
+          if (link.getAttribute("data-toc-target") === activeId) {
+            link.classList.add("is-active");
+            activeLinkEl = link;
+          } else {
+            link.classList.remove("is-active");
+          }
+        });
+
+        // 目次スクロール領域内の自動追従スクロール
+        if (activeLinkEl) {
+          const scrollContainer = (activeLinkEl as HTMLElement).closest(".toc-scroll-area");
+          if (scrollContainer) {
+            const containerRect = scrollContainer.getBoundingClientRect();
+            const linkRect = (activeLinkEl as HTMLElement).getBoundingClientRect();
+            const padding = 28;
+
+            if (linkRect.top < containerRect.top + padding) {
+              scrollContainer.scrollBy({
+                top: linkRect.top - containerRect.top - padding,
+                behavior: "smooth",
+              });
+            } else if (linkRect.bottom > containerRect.bottom - padding) {
+              scrollContainer.scrollBy({
+                top: linkRect.bottom - containerRect.bottom + padding,
+                behavior: "smooth",
+              });
+            }
+          }
+        }
+      }
+    }
+
+    window.addEventListener("scroll", updateActiveLink, { passive: true });
+    updateActiveLink();
+  }
+
   initDetailsAccordions();
-  document.addEventListener('astro:page-load', initDetailsAccordions);
+  initTocHighlight();
+  document.addEventListener("astro:page-load", () => {
+    initDetailsAccordions();
+    initTocHighlight();
+  });
 </script>

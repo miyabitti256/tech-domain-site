@@ -454,3 +454,115 @@ pre.mermaid .nodeLabel {
 	font-size: 14px !important;
 	line-height: 1.5 !important;
 }
+
+/* ── Inline Code ─────────────────────────────────────── */
+.prose
+:where(code):not(
+	:where(pre code, [class~="not-prose"], [class~="not-prose"] *)
+) {
+	@apply bg-muted/80 text-foreground font-mono px-1.5 py-0.5 text-[0.875em] rounded-md border border-border/60 font-medium;
+}
+
+.prose
+	:where(code):not(
+		:where(pre code, [class~="not-prose"], [class~="not-prose"] *)
+	)::before,
+.prose
+	:where(code):not(
+		:where(pre code, [class~="not-prose"], [class~="not-prose"] *)
+	)::after {
+	content: none !important;
+}
+
+/* ── Tables ─────────────────────────────────────────── */
+.prose table {
+	@apply w-full my-6 text-sm text-left border-collapse border border-border/60 rounded-lg overflow-hidden;
+}
+
+.prose thead {
+	@apply bg-muted/60 border-b border-border/60;
+}
+
+.prose thead th {
+	@apply px-4 py-2.5 font-semibold text-foreground;
+}
+
+.prose tbody tr {
+	@apply border-b border-border/40 transition-colors hover:bg-muted/30;
+}
+
+.prose tbody td {
+	@apply px-4 py-2.5 text-foreground;
+}
+
+/* ── Sticky TOC ─────────────────────────────────────── */
+.toc-scroll-area {
+	scrollbar-width: none;
+	-ms-overflow-style: none;
+}
+
+.toc-scroll-area::-webkit-scrollbar {
+	display: none;
+}
+
+.toc-desktop-link {
+	@apply text-muted-foreground hover:text-foreground block border-l-2 border-transparent py-1.5 pl-3 pr-2 text-xs leading-relaxed transition-all rounded-r-md;
+}
+
+.toc-desktop-link:hover {
+	@apply bg-muted/40 text-foreground;
+}
+
+.toc-desktop-link.is-active {
+	@apply text-foreground font-semibold border-l-primary bg-muted/80 dark:bg-muted/60;
+}
+
+/* ── Paper Sheet Article Styling ─────────────────────── */
+.article-paper-sheet {
+	position: relative;
+	background-color: var(--background);
+	border: none;
+	border-radius: 0;
+	padding: 1.5rem;
+	box-shadow:
+		0 0 50px -10px rgba(0, 0, 0, 0.05),
+		0 0 20px -5px rgba(0, 0, 0, 0.03);
+}
+
+@media (min-width: 640px) {
+	.article-paper-sheet {
+		padding: 2.5rem 3rem;
+	}
+}
+
+@media (min-width: 768px) {
+	.article-paper-sheet {
+		padding: 3rem 4rem;
+	}
+}
+
+/* 紙の微細なざらつきテクスチャ（紙の繊維感のある粒立ちとモノクログレイン） */
+.article-paper-sheet::before {
+	content: "";
+	position: absolute;
+	inset: 0;
+	border-radius: 0;
+	pointer-events: none;
+	background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.45' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.055'/%3E%3C/svg%3E");
+	background-size: 200px 200px;
+	mix-blend-mode: multiply;
+}
+
+.dark .article-paper-sheet {
+	background-color: var(--background);
+	border: none;
+	box-shadow:
+		0 0 60px -15px rgba(0, 0, 0, 0.6),
+		0 0 20px -5px rgba(0, 0, 0, 0.3);
+}
+
+.dark .article-paper-sheet::before {
+	opacity: 0.06;
+	mix-blend-mode: screen;
+	filter: invert(1);
+}

@@ -4,21 +4,25 @@
  * 良い例と悪い例を横並びで表示する
  */
 interface Example {
-  bg: string;
-  fg: string;
-  bgLabel: string;
-  fgLabel: string;
-  ratio: string;
-  pass: boolean;
+	bg: string;
+	fg: string;
+	bgLabel: string;
+	fgLabel: string;
+	ratio: string;
+	pass: boolean;
 }
 
 interface Props {
-  good: Example;
-  bad: Example;
-  sampleText?: string;
+	good: Example;
+	bad: Example;
+	sampleText?: string;
 }
 
-const { good, bad, sampleText = "色彩はデザインの基盤です。適切なコントラスト比を確保することで、すべてのユーザーにとって読みやすいUIを実現できます。" } = Astro.props;
+const {
+	good,
+	bad,
+	sampleText = "色彩はデザインの基盤です。適切なコントラスト比を確保することで、すべてのユーザーにとって読みやすいUIを実現できます。",
+} = Astro.props;
 ---
 
 <div class="not-prose my-8 grid grid-cols-1 sm:grid-cols-2 gap-4">
