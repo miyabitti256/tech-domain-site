@@ -1,0 +1,206 @@
+---
+title: "ブログのMarkdownにリッチな表示記法を追加しました"
+description: "当ブログのMarkdownで使えるようになったリッチな記法（蛍光ペン、ファイル名、ステップ手順、バッジなど）の紹介です。"
+publishedAt: 2026-09-18
+tags: ["Astro", "Markdown", "お知らせ"]
+---
+
+当ブログのMarkdownで、新しくいくつかリッチな表示ができる記法を追加しました！
+
+HTMLタグを直書きすることなく、Markdownらしいシンプルな書き方で少しだけリッチな表現をできるようにしています。
+
+どんな書き方で、どんな見た目になるのかを紹介していきます。
+
+## 蛍光ペン風マーカー（`:mark`）
+
+文字の下にサッと引かれた蛍光ペン風のハイライトです。
+ダークモード時にも白文字が埋もれてしまわないよう、テーマに合わせて発色や下線の高さを自動調整しています。（oklchパワー 💪）
+
+**書き方**
+```markdown
+これは :mark[重要なポイント] です。
+色もいくつか用意しています：
+- :mark[ピンク]{color="pink"}
+- :mark[グリーン]{color="green"}
+- :mark[ブルー]{color="blue"}
+- :mark[オレンジ]{color="orange"}
+- :mark[パープル]{color="purple"}
+```
+
+**見た目**
+- これは :mark[重要なポイント] です。
+- :mark[ピンクのマーカー]{color="pink"}
+- :mark[グリーンのマーカー]{color="green"}
+- :mark[ブルーのマーカー]{color="blue"}
+- :mark[オレンジのマーカー]{color="orange"}
+- :mark[パープルのマーカー]{color="purple"}
+
+## ファイル名・パス表示（`:file`）
+
+設定ファイルやソースコードのパスを書くときに使います。先頭に小さなファイルアイコンが自動で付きます。
+
+**書き方**
+```markdown
+設定ファイル :file[astro.config.mjs] を編集します。
+スタイルは :file[src/styles/articledetail.css] に記述します。
+```
+
+**見た目**
+- 設定ファイル :file[astro.config.mjs] を編集します。
+- スタイルは :file[src/styles/articledetail.css] に記述します。
+
+## 手順ステップ（`:::steps`）
+
+チュートリアルなどの手順を、番号付きのタイムライン風にすっきり並べられます。
+
+**書き方**
+````markdown
+:::steps
+### パッケージを追加
+依存パッケージをインストールします。
+
+### 設定を記述
+設定ファイルに必要な設定を書き足します。
+
+### サーバーを起動
+ローカルで起動して動作確認を行います。
+:::
+````
+
+**見た目**
+:::steps
+### パッケージを追加
+依存パッケージをインストールします。
+
+### 設定を記述
+設定ファイルに必要な設定を書き足します。
+
+### サーバーを起動
+ローカルで起動して動作確認を行います。
+:::
+
+## キーボード入力（`:kbd`）
+
+操作マニュアルやショートカットキーをキートップ風に表示できます。
+
+**書き方**
+```markdown
+保存は :kbd[Ctrl + S] （Macは :kbd[Cmd + S] ）を押します。
+コマンドパレットは :kbd[Ctrl + Shift + P] です。
+検索は :kbd[/] 、確定は :kbd[Enter] 、キャンセルは :kbd[Esc] です。
+```
+
+**見た目**
+- 保存は :kbd[Ctrl + S] （Macは :kbd[Cmd + S] ）を押します。
+- コマンドパレットは :kbd[Ctrl + Shift + P] です。
+- 検索は :kbd[/] 、確定は :kbd[Enter] 、キャンセルは :kbd[Esc] です。
+
+## バッジ（`:badge`）
+
+バージョン表記やステータスラベルの表示に使えます。
+
+**書き方**
+```markdown
+:badge[v1.4.0]
+:badge[NEW]{variant="success"}
+:badge[BETA]{variant="warning"}
+:badge[DEPRECATED]{variant="danger"}
+:badge[DOCS]{variant="info"}
+:badge[PRO]{variant="purple"}
+```
+
+**見た目**
+- バージョン: :badge[v1.4.0]
+- 成功 / 新機能: :badge[NEW]{variant="success"}
+- 警告 / 注意: :badge[BETA]{variant="warning"}
+- 危険 / 破壊的変更: :badge[DEPRECATED]{variant="danger"}
+- 情報 / ドキュメント: :badge[DOCS]{variant="info"}
+- パープル: :badge[PRO]{variant="purple"}
+
+## 伏せ字・ネタバレ隠し（`:spoiler`）
+
+マウスを乗せたりタップすると、ボカシがふわりと消えて読めるようになる伏せ字です。クイズとか、ちょっとした部分で使う予定です。
+
+**書き方**
+```markdown
+今年の優勝チームは :spoiler[チームアルファ] でした！
+```
+
+**見た目**
+- 今年の優勝チームは :spoiler[チームアルファ] でした！（カーソルを合わせると読めます）
+
+## インラインアイコン（`:icon`）
+
+文中にSVGアイコンを直接埋め込めます。トップページのマーキーセクションと同様に、`Simple Icons`や`Tabler Icons`の名前でアイコンを自動探索して表示できます。
+
+**書き方**
+```markdown
+UIアイコン:
+- :icon[check] テストがすべて通過しました
+- :icon[star] おすすめのライブラリ
+- :icon[copy] ボタンを押してコピー
+- :icon[external] 公式ドキュメントを見る
+
+技術・ブランドアイコン
+- :icon[astro] Astro
+- :icon[bun] Bun
+- :icon[typescript] TypeScript
+- :icon[rust] Rust
+- :icon[tailwind] Tailwind CSS
+- :icon[react] React
+- :icon[zenn] Zenn
+- :icon[github] GitHub
+```
+
+**見た目**
+- :icon[check] テストがすべて通過しました
+- :icon[star] おすすめのライブラリ
+- :icon[copy] ボタンを押してコピー
+- :icon[external] 公式ドキュメントを見る
+
+技術・ブランドアイコン
+- :icon[astro] Astro
+- :icon[bun] Bun
+- :icon[typescript] TypeScript
+- :icon[rust] Rust
+- :icon[tailwind] Tailwind CSS
+- :icon[react] React
+- :icon[zenn] Zenn
+- :icon[github] GitHub
+
+## ふりがな・ルビ（`:ruby`）
+
+難しい漢字や専門用語にふりがなを振ることができます。
+
+**書き方**
+```markdown
+- OKLCHは :ruby[知覚均一]{rt="ちかくきんいつ"} な色空間です。
+- この仕様には :ruby[脆弱性]{rt="ぜいじゃくせい"} の懸念があります。
+```
+
+**見た目**
+- OKLCHは :ruby[知覚均一]{rt="ちかくきんいつ"} な色空間です。
+- この仕様には :ruby[脆弱性]{rt="ぜいじゃくせい"} の懸念があります。
+
+## 折りたたみ（`:::details`）
+
+補足情報や長いコードをすっきり隠したいときに使えます。（これ自体はもともとありましたが）
+
+**書き方**
+````markdown
+:::details[ここをクリックして展開]
+折りたたまれていた中身がここに表示されます。
+コードブロックや画像なども入れられます。
+:::
+````
+
+**見た目**
+:::details[ここをクリックして展開]
+折りたたまれていた中身がここに表示されます。コードブロックや通常のテキストも自由に配置できます。
+:::
+
+---
+
+当ブログで使えるようになった新しい記法たちの紹介でした！
+
+これから新しく書く記事では、これらの記法を積極的に使っていきます。また、既存の記事もまだ数は少ないですが、順次この記法を取り入れてより見やすくリライトしていく予定です！

@@ -566,3 +566,107 @@ pre.mermaid .nodeLabel {
 	mix-blend-mode: screen;
 	filter: invert(1);
 }
+
+/* チュートリアル用ステップ表示（:::steps） */
+.custom-steps {
+	counter-reset: step-counter;
+	position: relative;
+	margin-top: 1.5rem;
+	margin-bottom: 2.5rem;
+	margin-left: 1rem;
+	padding-left: 1.75rem;
+	border-left: 2px solid var(--border);
+}
+
+.custom-steps > h2,
+.custom-steps > h3,
+.custom-steps > h4 {
+	counter-increment: step-counter;
+	position: relative;
+	margin-top: 2rem !important;
+	margin-bottom: 0.75rem !important;
+}
+
+.custom-steps > h2:first-child,
+.custom-steps > h3:first-child,
+.custom-steps > h4:first-child {
+	margin-top: 0.5rem !important;
+}
+
+.custom-steps > h2::before,
+.custom-steps > h3::before,
+.custom-steps > h4::before {
+	content: counter(step-counter);
+	position: absolute;
+	left: calc(-1.75rem - 1px);
+	top: 50%;
+	transform: translate(-50%, -50%);
+	width: 1.6rem;
+	height: 1.6rem;
+	border-radius: 9999px;
+	background-color: var(--card);
+	border: 2px solid var(--primary);
+	color: var(--primary);
+	font-size: 0.75rem;
+	font-weight: 700;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	line-height: 1;
+	box-shadow: 0 0 0 4px var(--background);
+}
+
+/* 蛍光ペン風マーカー（:mark） */
+.custom-mark {
+	font-weight: 600;
+	padding-left: 0.15rem;
+	padding-right: 0.15rem;
+	border-radius: 0.125rem;
+	color: inherit;
+	background: linear-gradient(transparent 60%, var(--mark-color) 60%);
+}
+
+/* ライトモード用のマーカー配色（OKLCHによる知覚均一な明度 L=0.85〜0.88） */
+.custom-mark-yellow {
+	--mark-color: oklch(0.88 0.16 98 / 0.5);
+}
+.custom-mark-pink {
+	--mark-color: oklch(0.85 0.16 355 / 0.5);
+}
+.custom-mark-green {
+	--mark-color: oklch(0.86 0.15 145 / 0.5);
+}
+.custom-mark-blue {
+	--mark-color: oklch(0.84 0.14 245 / 0.5);
+}
+.custom-mark-orange {
+	--mark-color: oklch(0.86 0.16 55 / 0.5);
+}
+.custom-mark-purple {
+	--mark-color: oklch(0.85 0.15 305 / 0.5);
+}
+
+/* ダークモード対応:
+   白文字（#e4e4e7）の視認性とコントラスト比を損なわないよう、
+   線の高さを下部35%に抑え、OKLCHの均一明度（L=0.54〜0.58）で文字の白飛びを防止 */
+.dark .custom-mark {
+	background: linear-gradient(transparent 65%, var(--mark-color) 65%);
+}
+.dark .custom-mark-yellow {
+	--mark-color: oklch(0.58 0.18 95 / 0.45);
+}
+.dark .custom-mark-pink {
+	--mark-color: oklch(0.55 0.19 355 / 0.45);
+}
+.dark .custom-mark-green {
+	--mark-color: oklch(0.56 0.17 145 / 0.45);
+}
+.dark .custom-mark-blue {
+	--mark-color: oklch(0.54 0.16 245 / 0.45);
+}
+.dark .custom-mark-orange {
+	--mark-color: oklch(0.56 0.18 55 / 0.45);
+}
+.dark .custom-mark-purple {
+	--mark-color: oklch(0.55 0.18 305 / 0.45);
+}

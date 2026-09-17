@@ -10,7 +10,6 @@ import rehypeExternalLinks from "rehype-external-links";
 import rehypeMathjax from "rehype-mathjax/svg";
 import rehypeSlug from "rehype-slug";
 import remarkBreaks from "remark-breaks";
-import remarkDirective from "remark-directive";
 import remarkGithubAlerts from "remark-github-alerts";
 import remarkLinkCard from "remark-link-card-plus";
 import remarkMath from "remark-math";
@@ -37,7 +36,6 @@ export default defineConfig({
                 remarkMermaidSsr,
                 remarkGithubAlerts,
                 remarkBreaks,
-                remarkDirective,
                 remarkCustomDirectives,
                 remarkEmbeds,
                 [remarkLinkCard, { cache: true }],

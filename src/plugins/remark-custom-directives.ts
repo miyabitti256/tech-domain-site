@@ -1,3 +1,5 @@
+import fs from "node:fs";
+import path from "node:path";
 import { h } from "hastscript";
 import type { Root, Text } from "mdast";
 import { directiveFromMarkdown } from "mdast-util-directive";
@@ -36,16 +38,157 @@ const SUPPORTED_TEXT_DIRECTIVES = new Set([
 ]);
 const SUPPORTED_CONTAINER_DIRECTIVES = new Set(["details", "steps"]);
 
-// インラインアイコンのSVG辞書
-const INLINE_ICONS: Record<string, string> = {
-	check: `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-green-600 dark:text-green-400 inline-block"><polyline points="20 6 9 17 4 12"/></svg>`,
-	x: `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-red-600 dark:text-red-400 inline-block"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`,
-	star: `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none" class="text-amber-500 inline-block"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`,
-	zap: `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none" class="text-amber-500 inline-block"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>`,
-	external: `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-muted-foreground inline-block"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>`,
-	copy: `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-muted-foreground inline-block"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>`,
-	github: `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" class="inline-block"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>`,
+const SIMPLE_ICONS_DIR = path.resolve("./node_modules/simple-icons-astro/dist");
+const TABLER_ICONS_DIR = path.resolve(
+	"./node_modules/@tabler/icons/icons/outline",
+);
+
+// よく使われる表記のエイリアスマップ
+const ICON_ALIASES: Record<string, string> = {
+	tailwind: "tailwindcss",
+	js: "javascript",
+	ts: "typescript",
+	py: "python",
+	rs: "rust",
+	rb: "ruby",
+	go: "golang",
+	next: "nextdotjs",
+	nextjs: "nextdotjs",
+	vuejs: "vuedotjs",
+	vue: "vuedotjs",
+	node: "nodedotjs",
+	nodejs: "nodedotjs",
+	external: "external-link",
+	link: "link",
+	zap: "bolt",
+	cross: "x",
+	close: "x",
+	twitter: "x-corp",
+	"x-twitter": "x-corp",
+	"brand-x": "x-corp",
 };
+
+// UIアイコンとしてTabler Iconsを優先するキーワード
+// Why not: 「x」をSimple Icons優先で探すとTwitter/Xの企業ロゴ（𝕏）がヒットしてしまい、checkと対になる「バツ印（×）」が表示できなくなるため、UI記号はTabler Iconsを優先する
+const PREFER_TABLER_ICONS = new Set([
+	"x",
+	"cross",
+	"close",
+	"check",
+	"star",
+	"copy",
+	"external-link",
+	"bolt",
+]);
+
+// ビルドパフォーマンス向上のためのインメモリSVGキャッシュ
+const iconCache = new Map<string, string>();
+let simpleIconFiles: string[] | null = null;
+
+// Why not: アイコンを静的リストに限定すると新しい技術スタックやUIアイコンを追加するたびにプラグイン修正が必要になるため、マーキーセクションと同様にライブラリ（simple-icons / tabler）から動的に探索・キャッシュする
+function resolveIconSvg(rawName: string): string | null {
+	const trimmed = rawName.trim();
+	if (!trimmed) return null;
+
+	const lower = trimmed.toLowerCase();
+	const name = ICON_ALIASES[lower] || trimmed;
+
+	if (iconCache.has(name)) {
+		return iconCache.get(name) || null;
+	}
+
+	// 0. Twitter / X の特別対応（Simple Icons の X.astro）
+	if (name === "x-corp" && fs.existsSync(SIMPLE_ICONS_DIR)) {
+		const filePath = path.join(SIMPLE_ICONS_DIR, "X.astro");
+		if (fs.existsSync(filePath)) {
+			const content = fs.readFileSync(filePath, "utf8");
+			const match = content.match(/<path[^>]+>/);
+			if (match) {
+				const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" class="inline-block align-middle mx-0.5 shrink-0 text-current">${match[0]}</svg>`;
+				iconCache.set(name, svg);
+				iconCache.set(trimmed, svg);
+				return svg;
+			}
+		}
+	}
+
+	// 1. UIアイコン（x, check, star 等）の場合は先に Tabler Icons を探索
+	if (PREFER_TABLER_ICONS.has(name) && fs.existsSync(TABLER_ICONS_DIR)) {
+		const kebab = name === "cross" || name === "close" ? "x" : name;
+		const filePath = path.join(TABLER_ICONS_DIR, `${kebab}.svg`);
+		if (fs.existsSync(filePath)) {
+			let svg = fs.readFileSync(filePath, "utf8");
+			svg = svg
+				.replace(/width="24"/, 'width="14"')
+				.replace(/height="24"/, 'height="14"')
+				.replace(
+					/<svg/,
+					'<svg class="inline-block align-middle mx-0.5 shrink-0 text-current"',
+				);
+			iconCache.set(name, svg);
+			iconCache.set(trimmed, svg);
+			return svg;
+		}
+	}
+
+	// 2. simple-icons-astro から探索（技術・ブランドアイコン）
+	if (fs.existsSync(SIMPLE_ICONS_DIR)) {
+		const clean = name
+			.toLowerCase()
+			.replace(/\./g, "dot")
+			.replace(/\+/g, "plus")
+			.replace(/#/g, "sharp")
+			.replace(/[\s\-_]/g, "");
+		const pascal = clean.charAt(0).toUpperCase() + clean.slice(1);
+		const targetFile = `${pascal}.astro`;
+		let filePath = path.join(SIMPLE_ICONS_DIR, targetFile);
+
+		if (!fs.existsSync(filePath)) {
+			if (!simpleIconFiles) {
+				simpleIconFiles = fs.readdirSync(SIMPLE_ICONS_DIR);
+			}
+			const lowerTarget = targetFile.toLowerCase();
+			const matched = simpleIconFiles.find(
+				(f) => f.toLowerCase() === lowerTarget,
+			);
+			if (matched) {
+				filePath = path.join(SIMPLE_ICONS_DIR, matched);
+			}
+		}
+
+		if (filePath && fs.existsSync(filePath)) {
+			const content = fs.readFileSync(filePath, "utf8");
+			const match = content.match(/<path[^>]+>/);
+			if (match) {
+				const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" class="inline-block align-middle mx-0.5 shrink-0 text-current">${match[0]}</svg>`;
+				iconCache.set(name, svg);
+				iconCache.set(trimmed, svg);
+				return svg;
+			}
+		}
+	}
+
+	// 3. @tabler/icons から探索（フォールバック）
+	if (fs.existsSync(TABLER_ICONS_DIR)) {
+		const kebab = name.toLowerCase().replace(/[\s_]/g, "-");
+		const filePath = path.join(TABLER_ICONS_DIR, `${kebab}.svg`);
+		if (fs.existsSync(filePath)) {
+			let svg = fs.readFileSync(filePath, "utf8");
+			svg = svg
+				.replace(/width="24"/, 'width="14"')
+				.replace(/height="24"/, 'height="14"')
+				.replace(
+					/<svg/,
+					'<svg class="inline-block align-middle mx-0.5 shrink-0 text-current"',
+				);
+			iconCache.set(name, svg);
+			iconCache.set(trimmed, svg);
+			return svg;
+		}
+	}
+
+	return null;
+}
 
 const FILE_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-muted-foreground shrink-0"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg>`;
 
@@ -97,31 +240,33 @@ export const remarkCustomDirectives: Plugin<[], Root> = function (
 					};
 				} else if (name === "badge") {
 					// ピルバッジスタイル
+					// Why not: 半透明度（/80等）や淡いborderを使うと背景と同化してコントラスト比（AA/AAA）が不足するため、文字・ボーダーともに明瞭な不透明トークンを指定する
 					const variant = attrs.variant || "default";
-					let colorClass = "bg-muted text-muted-foreground border-border";
+					let colorClass =
+						"bg-zinc-100 text-zinc-900 border-zinc-300 shadow-2xs dark:bg-zinc-800 dark:text-zinc-100 dark:border-zinc-600";
 					if (variant === "success" || variant === "green") {
 						colorClass =
-							"bg-green-500/15 text-green-700 dark:text-green-300 border-green-500/30";
+							"bg-emerald-50 text-emerald-900 border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-200 dark:border-emerald-700/80";
 					} else if (
 						variant === "warning" ||
 						variant === "yellow" ||
 						variant === "amber"
 					) {
 						colorClass =
-							"bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30";
+							"bg-amber-50 text-amber-950 border-amber-300 dark:bg-amber-950/60 dark:text-amber-200 dark:border-amber-700/80";
 					} else if (
 						variant === "danger" ||
 						variant === "red" ||
 						variant === "error"
 					) {
 						colorClass =
-							"bg-red-500/15 text-red-700 dark:text-red-300 border-red-500/30";
+							"bg-rose-50 text-rose-900 border-rose-300 dark:bg-rose-950/60 dark:text-rose-200 dark:border-rose-700/80";
 					} else if (variant === "info" || variant === "blue") {
 						colorClass =
-							"bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/30";
+							"bg-sky-50 text-sky-900 border-sky-300 dark:bg-sky-950/60 dark:text-sky-200 dark:border-sky-700/80";
 					} else if (variant === "purple") {
 						colorClass =
-							"bg-purple-500/15 text-purple-700 dark:text-purple-300 border-purple-500/30";
+							"bg-purple-50 text-purple-900 border-purple-300 dark:bg-purple-950/60 dark:text-purple-200 dark:border-purple-700/80";
 					}
 
 					directiveNode.data = {
@@ -149,27 +294,26 @@ export const remarkCustomDirectives: Plugin<[], Root> = function (
 					};
 					directiveNode.children = [];
 				} else if (name === "mark") {
-					// 蛍光ペン風マーカー（文字の下部60%に色が被る定番スタイル）
-					const color = attrs.color || attrs.variant || "yellow";
-					let markerColor = "rgba(250, 204, 21, 0.45)"; // yellow
-					if (color === "pink" || color === "red") {
-						markerColor = "rgba(244, 114, 182, 0.45)";
-					} else if (color === "green") {
-						markerColor = "rgba(74, 222, 128, 0.45)";
-					} else if (color === "blue" || color === "cyan") {
-						markerColor = "rgba(96, 165, 250, 0.45)";
-					} else if (color === "orange") {
-						markerColor = "rgba(251, 146, 60, 0.45)";
-					} else if (color === "purple") {
-						markerColor = "rgba(192, 132, 252, 0.45)";
+					// 蛍光ペン風マーカー
+					// Why not: インラインstyleで固定カラーを指定するとダークモード時のコントラスト比（白文字の埋没）に対応できないため、CSSクラスでテーマ別に配色とグラデーション高さを制御する
+					const rawColor = attrs.color || attrs.variant || "yellow";
+					let markColorClass = "custom-mark-yellow";
+					if (rawColor === "pink" || rawColor === "red") {
+						markColorClass = "custom-mark-pink";
+					} else if (rawColor === "green") {
+						markColorClass = "custom-mark-green";
+					} else if (rawColor === "blue" || rawColor === "cyan") {
+						markColorClass = "custom-mark-blue";
+					} else if (rawColor === "orange") {
+						markColorClass = "custom-mark-orange";
+					} else if (rawColor === "purple") {
+						markColorClass = "custom-mark-purple";
 					}
 
 					directiveNode.data = {
 						hName: "mark",
 						hProperties: {
-							class:
-								"font-semibold px-0.5 rounded-xs text-inherit bg-transparent",
-							style: `background: linear-gradient(transparent 60%, ${markerColor} 60%);`,
+							class: `custom-mark ${markColorClass}`,
 						},
 					};
 				} else if (name === "file") {
@@ -197,12 +341,12 @@ export const remarkCustomDirectives: Plugin<[], Root> = function (
 						},
 					};
 				} else if (name === "icon") {
-					// インラインアイコン
+					// インラインアイコン（simple-icons-astro および tabler-icons から動的に探索）
 					const labelText =
 						directiveNode.children?.[0]?.type === "text"
 							? (directiveNode.children[0] as Text).value.trim()
 							: "";
-					const iconSvg = INLINE_ICONS[labelText] || "";
+					const iconSvg = resolveIconSvg(labelText);
 					if (iconSvg) {
 						directiveNode.data = {
 							hName: "span",
