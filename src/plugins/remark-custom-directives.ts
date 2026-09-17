@@ -91,5 +91,23 @@ export function remarkCustomDirectives() {
 
 			node.children = [summaryNode, contentWrapper];
 		});
+
+		// 未処理のtextDirective（:1 等）が空のdiv要素に化けるのを防ぎ、プレーンテキストとして復元する
+		visit(
+			tree,
+			"textDirective",
+			(node: Node, index, parent: Parent | undefined) => {
+				if (index === undefined || !parent) return;
+				const directive = node as DirectiveNode;
+
+				// Why not: 未知のtextDirectiveを放置するとremark-rehypeで空のblock要素(div)が生成され、文章中の「4.5:1」等のコロン表記が消失して不自然に改行されるため
+				const textNodes: Node[] = [
+					{ type: "text", value: `:${directive.name}` } as Text,
+					...(directive.children || []),
+				];
+				parent.children.splice(index, 1, ...textNodes);
+				return index + textNodes.length;
+			},
+		);
 	};
 }

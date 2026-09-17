@@ -1,0 +1,122 @@
+---
+/**
+ * HSLとOKLCHの知覚的な明度の均一性を視覚的に比較するコンポーネント
+ * 同じ明度数値でも、HSLは色相によって知覚される明るさが大きくバラつき、
+ * OKLCHは色相が変わっても一貫した明るさが保たれることを示す
+ */
+
+interface ColorSwatchItem {
+	label: string;
+	color: string;
+	code: string;
+}
+
+const hslSwatches: ColorSwatchItem[] = [
+	{
+		label: "青 (H=240)",
+		color: "hsl(240, 100%, 50%)",
+		code: "hsl(240 100% 50%)",
+	},
+	{
+		label: "緑 (H=120)",
+		color: "hsl(120, 100%, 50%)",
+		code: "hsl(120 100% 50%)",
+	},
+	{ label: "黄 (H=60)", color: "hsl(60, 100%, 50%)", code: "hsl(60 100% 50%)" },
+	{ label: "赤 (H=0)", color: "hsl(0, 100%, 50%)", code: "hsl(0 100% 50%)" },
+];
+
+const oklchSwatches: ColorSwatchItem[] = [
+	{
+		label: "青 (H=250)",
+		color: "oklch(0.65 0.15 250)",
+		code: "oklch(0.65 0.15 250)",
+	},
+	{
+		label: "緑 (H=145)",
+		color: "oklch(0.65 0.15 145)",
+		code: "oklch(0.65 0.15 145)",
+	},
+	{
+		label: "黄 (H=95)",
+		color: "oklch(0.65 0.15 95)",
+		code: "oklch(0.65 0.15 95)",
+	},
+	{
+		label: "赤 (H=25)",
+		color: "oklch(0.65 0.15 25)",
+		code: "oklch(0.65 0.15 25)",
+	},
+];
+---
+
+<div class="not-prose my-8 space-y-6">
+  {/* HSLの比較カード */}
+  <div class="rounded-xl border border-border/60 overflow-hidden bg-card shadow-xs">
+    <div class="px-4 py-3 bg-red-500/10 border-b border-border/50">
+      <div class="flex items-center gap-2">
+        <span class="text-xs font-bold text-red-600 dark:text-red-400">⚠️ HSL（L = 50% で統一）</span>
+      </div>
+      <p class="text-xs text-muted-foreground mt-1">
+        数値上の明度はすべて50%ですが、人間の目には黄色や緑が極端に明るく、青が沈んで見えます。
+      </p>
+    </div>
+
+    <div class="p-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
+      {hslSwatches.map((swatch) => (
+        <div class="rounded-lg overflow-hidden border border-border/50 flex flex-col bg-muted/20">
+          <div
+            class="h-16 flex items-center justify-center text-xs font-medium text-white"
+            style={`background-color: ${swatch.color};`}
+          >
+            <span class="bg-black/50 px-2 py-0.5 rounded text-[11px] backdrop-blur-[2px]">{swatch.label}</span>
+          </div>
+          {/* Why not: モノクロ画像を別途用意するのではなく、CSSのgrayscaleフィルタを適用してブラウザ上で即座に視覚化する */}
+          <div
+            class="h-8 flex items-center justify-center text-[10px] text-foreground/80 font-mono border-t border-black/10"
+            style={`background-color: ${swatch.color}; filter: grayscale(100%);`}
+          >
+            <span class="bg-background/80 px-1.5 py-0.5 rounded text-[10px]">モノクロ化</span>
+          </div>
+          <div class="p-2 text-center border-t border-border/40">
+            <code class="text-[10px] font-mono text-muted-foreground block truncate">{swatch.code}</code>
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+
+  {/* OKLCHの比較カード */}
+  <div class="rounded-xl border border-border/60 overflow-hidden bg-card shadow-xs">
+    <div class="px-4 py-3 bg-green-500/10 border-b border-border/50">
+      <div class="flex items-center gap-2">
+        <span class="text-xs font-bold text-green-600 dark:text-green-400">✅ OKLCH（L = 0.65, C = 0.15 で統一）</span>
+      </div>
+      <p class="text-xs text-muted-foreground mt-1">
+        知覚均一性：色相を変えても全体の明るさ感が均等に揃い、モノクロ化しても階調が一定です。
+      </p>
+    </div>
+
+    <div class="p-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
+      {oklchSwatches.map((swatch) => (
+        <div class="rounded-lg overflow-hidden border border-border/50 flex flex-col bg-muted/20">
+          <div
+            class="h-16 flex items-center justify-center text-xs font-medium text-white"
+            style={`background-color: ${swatch.color};`}
+          >
+            <span class="bg-black/50 px-2 py-0.5 rounded text-[11px] backdrop-blur-[2px]">{swatch.label}</span>
+          </div>
+          <div
+            class="h-8 flex items-center justify-center text-[10px] text-foreground/80 font-mono border-t border-black/10"
+            style={`background-color: ${swatch.color}; filter: grayscale(100%);`}
+          >
+            <span class="bg-background/80 px-1.5 py-0.5 rounded text-[10px]">モノクロ化</span>
+          </div>
+          <div class="p-2 text-center border-t border-border/40">
+            <code class="text-[10px] font-mono text-muted-foreground block truncate">{swatch.code}</code>
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+</div>
