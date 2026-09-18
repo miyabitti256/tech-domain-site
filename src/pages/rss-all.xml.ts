@@ -12,7 +12,7 @@ export async function GET(context: APIContext) {
 	return rss({
 		title: "miyabittiのテックブログ (全件)",
 		description:
-			"miyabittiのテックブログです。フロントエンド/TypeScriptをメインに発信していきます。全件のRSSフィードです。",
+			"TypeScript / JavaScriptのエコシステムやWeb技術を中心に発信するmiyabittiのテックブログです。全件のRSSフィードです。",
 		site: context.site || "https://tech.miyabitti.com",
 		items: sortedArticles.map((article) => ({
 			title: article.data.title,

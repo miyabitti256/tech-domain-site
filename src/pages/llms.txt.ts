@@ -10,7 +10,7 @@ export async function GET(context: APIContext) {
 
 	const siteTitle = "miyabittiのテックブログ";
 	const siteDescription =
-		"miyabittiのテックブログです。フロントエンド/TypeScriptをメインに発信していきます。";
+		"TypeScript / JavaScriptのエコシステムやWeb技術を中心に発信するmiyabittiのテックブログです。";
 	// 末尾のスラッシュを削除
 	const siteUrl = (
 		context.site?.toString() || "https://tech.miyabitti.com"

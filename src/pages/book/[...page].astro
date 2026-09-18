@@ -88,7 +88,20 @@ const basePath = "/book";
 const getPageUrl = (n: number) => (n === 1 ? basePath : `${basePath}/${n}`);
 ---
 
-<Layout title={`Books${page.currentPage > 1 ? ` - Page ${page.currentPage}` : ""} | miyabittiのテックブログ`}>
+<Layout 
+  title={`Books${page.currentPage > 1 ? ` - Page ${page.currentPage}` : ""} | miyabittiのテックブログ`}
+  description="TypeScript / JavaScriptやWeb技術に関する連載・シリーズ記事をまとめたブック一覧です。"
+>
+  <Fragment slot="head">
+    <script is:inline type="application/ld+json" set:html={JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Home", "item": new URL("/", Astro.site).href },
+        { "@type": "ListItem", "position": 2, "name": "Books", "item": new URL("/book/", Astro.site).href }
+      ]
+    })} />
+  </Fragment>
   <main class="py-8">
     <div class="px-6 mx-auto max-w-6xl">
       <div class="mb-16">

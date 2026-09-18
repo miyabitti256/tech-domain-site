@@ -62,13 +62,26 @@ const basePath = "/article";
 const getPageUrl = (n: number) => (n === 1 ? basePath : `${basePath}/${n}`);
 ---
 
-<Layout title={`Articles${page.currentPage > 1 ? ` - Page ${page.currentPage}` : ""} | miyabittiのテックブログ`}>
+<Layout 
+  title={`Articles${page.currentPage > 1 ? ` - Page ${page.currentPage}` : ""} | miyabittiのテックブログ`}
+  description="TypeScript、JavaScript、モダンWeb開発の実装ログや知見をまとめた記事一覧です。"
+>
+  <Fragment slot="head">
+    <script is:inline type="application/ld+json" set:html={JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Home", "item": new URL("/", Astro.site).href },
+        { "@type": "ListItem", "position": 2, "name": "Articles", "item": new URL("/article/", Astro.site).href }
+      ]
+    })} />
+  </Fragment>
   <main class="py-8">
     <div class="px-6 mx-auto max-w-6xl">
       <div class="mb-16">
         <h1 class="text-4xl md:text-5xl font-bold tracking-tight text-foreground mb-4">Articles</h1>
         <h2 class="text-lg text-muted-foreground max-w-2xl">
-          Webデザイン、フロントエンド開発、アニメーション、そして日々の気づきを記録しています。
+          TypeScript、JavaScript、モダンWeb開発の実装ログや知見を記録しています。
         </h2>
       </div>
 

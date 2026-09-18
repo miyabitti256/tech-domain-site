@@ -80,13 +80,20 @@ const isDev = import.meta.env.DEV;
       "@type": "Article",
       "headline": title,
       "description": description,
+      "inLanguage": "ja",
+      "keywords": tags,
       "image": new URL(image || `/ogp/article/${entry.id}.webp`, Astro.site).href,
       "datePublished": publishedAt.toISOString(),
       "dateModified": updatedAt ? updatedAt.toISOString() : publishedAt.toISOString(),
       "author": {
         "@type": "Person",
         "name": "miyabitti",
-        "url": "https://github.com/miyabitti256"
+        "url": "https://github.com/miyabitti256",
+        "sameAs": [
+          "https://github.com/miyabitti256",
+          "https://x.com/miyabitti0256",
+          "https://zenn.dev/miyabitti"
+        ]
       },
       "publisher": {
         "@type": "Organization",

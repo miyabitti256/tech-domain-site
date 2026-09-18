@@ -11,13 +11,15 @@ interface Props {
 	description?: string;
 	ogImage?: string;
 	ogType?: string;
+	noindex?: boolean;
 }
 
 const {
 	title = "miyabittiのテックブログ",
-	description = "miyabittiのテックブログです。フロントエンド/TypeScriptをメインに発信していきます。",
+	description = "TypeScript / JavaScriptのエコシステムやWeb技術を中心に、日々の開発知見や実装ログを発信するmiyabittiのテックブログです。",
 	ogImage = "/ogp.webp",
 	ogType = "website",
+	noindex = false,
 } = Astro.props;
 
 const canonicalURL = new URL(Astro.url.pathname, Astro.site);
@@ -58,6 +60,7 @@ const isDev = import.meta.env.DEV;
     <title>{title}</title>
     <meta name="title" content={title} />
     <meta name="description" content={description} />
+    {noindex && <meta name="robots" content="noindex, follow" />}
     <link rel="canonical" href={canonicalURL.href} />
 
     <!-- Open Graph / Facebook -->
@@ -65,10 +68,14 @@ const isDev = import.meta.env.DEV;
     <meta property="og:url" content={canonicalURL.href} />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
+    <meta property="og:site_name" content="miyabittiのテックブログ" />
+    <meta property="og:locale" content="ja_JP" />
     <meta property="og:image" content={new URL(ogImage, Astro.site)} />
 
     <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@miyabitti0256" />
+    <meta name="twitter:creator" content="@miyabitti0256" />
     <meta name="twitter:url" content={canonicalURL.href} />
     <meta name="twitter:title" content={title} />
     <meta name="twitter:description" content={description} />

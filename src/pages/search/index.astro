@@ -5,7 +5,11 @@ import Layout from "@/layouts/Layout.astro";
 const title = "Search | miyabittiのテックブログ";
 ---
 
-<Layout title={title}>
+<Layout 
+  title={title}
+  description="記事をタイトル、説明、タグで検索できます。"
+  noindex={true}
+>
   <main class="py-8">
     <div class="px-6 mx-auto max-w-6xl">
 
