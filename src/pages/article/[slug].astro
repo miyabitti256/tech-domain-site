@@ -1,6 +1,6 @@
 ---
 import { getCollection, render } from "astro:content";
-import { RefreshCcw } from "@lucide/astro";
+import { ArrowUpRight, FileText, RefreshCcw } from "@lucide/astro";
 import AuthorCard from "@/components/layouts/AuthorCard.astro";
 import PrevNextNav from "@/components/layouts/PrevNextNav.astro";
 import Prose from "@/components/markdown/Prose.astro";
@@ -127,7 +127,7 @@ const isDev = import.meta.env.DEV;
 
   <div class="py-8">
     <div class="px-6 mx-auto max-w-3xl xl:max-w-6xl">
-      <div class="mb-8">
+      <div class="flex items-center justify-between gap-4 mb-8">
         <Breadcrumb>
           <BreadcrumbList>
             <BreadcrumbItem>
@@ -143,6 +143,18 @@ const isDev = import.meta.env.DEV;
             </BreadcrumbItem>
           </BreadcrumbList>
         </Breadcrumb>
+
+        <a
+          href={`/article/${entry.id}.md`}
+          target="_blank"
+          rel="noopener noreferrer"
+          class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono font-medium rounded-lg border border-border bg-card/80 text-muted-foreground hover:text-foreground hover:bg-muted/60 hover:border-foreground/20 transition-all shrink-0 shadow-2xs group"
+          title="Markdown RAWファイルを開く"
+        >
+          <FileText class="w-3.5 h-3.5 text-muted-foreground group-hover:text-foreground transition-colors" />
+          <span>.mdで開く</span>
+          <ArrowUpRight class="w-3 h-3 text-muted-foreground/60 group-hover:text-foreground transition-colors" />
+        </a>
       </div>
 
       <div class="xl:grid xl:grid-cols-[minmax(0,1fr)_260px] xl:gap-12 items-start">
