@@ -50,7 +50,7 @@ const title = "Search | miyabittiのテックブログ";
       <div id="search-skeleton" class="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
         {Array.from({ length: 6 }).map(() => (
           <div class="flex flex-col h-full overflow-hidden border rounded-2xl border-border bg-background/50 animate-pulse">
-            <div class="aspect-video bg-muted/40"></div>
+            <div class="aspect-1200/630 bg-muted/40"></div>
             <div class="p-6 space-y-3">
               <div class="h-3 w-24 bg-muted/40 rounded"></div>
               <div class="h-5 w-3/4 bg-muted/40 rounded"></div>
@@ -186,8 +186,9 @@ const title = "Search | miyabittiのテックブログ";
         year: 'numeric', month: 'short', day: 'numeric',
       });
 
-      const imageHtml = article.image
-        ? `<img src="${article.image}" alt="${article.title}" class="object-cover w-full h-full" loading="lazy" />`
+      const imageSrc = article.image || `/ogp/article/${article.id}.webp`;
+      const imageHtml = imageSrc
+        ? `<img src="${imageSrc}" alt="${article.title}" class="object-cover w-full h-full" loading="lazy" />`
         : `<div class="flex items-center justify-center w-full h-full text-muted-foreground">
             <svg class="w-12 h-12 opacity-20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -212,7 +213,7 @@ const title = "Search | miyabittiのテックブログ";
       return `
         <a href="/article/${article.id}" class="block group search-result-card" style="opacity:0;transform:translateY(12px)">
           <article class="flex flex-col h-full overflow-hidden transition-all duration-300 border rounded-2xl border-border bg-background/50 backdrop-blur-sm hover:shadow-lg hover:-translate-y-1">
-            <div class="relative overflow-hidden aspect-video bg-muted/30">
+            <div class="relative overflow-hidden aspect-1200/630 bg-muted/30">
               ${imageHtml}
             </div>
             <div class="flex flex-col flex-1 p-6">

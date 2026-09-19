@@ -26,7 +26,7 @@
 
 @layer base {
 	:root {
-		--background: #ffffff;
+		--background: #faf9f6;
 		--foreground: #09090b;
 		--muted: #f4f4f5;
 		--muted-foreground: #52525b;
@@ -59,6 +59,25 @@
 		width: 100%;
 		position: relative;
 		/* View Transitions と干渉するため transition-colors は削除または VT 非対応時のみ適用します */
+	}
+
+	/* サイト全体の紙質感グレインテクスチャ（暗くならず微細な繊維感を与える） */
+	body::before {
+		content: "";
+		position: fixed;
+		inset: 0;
+		pointer-events: none;
+		background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.5' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='1'/%3E%3C/svg%3E");
+		background-size: 200px 200px;
+		opacity: 0.085;
+		mix-blend-mode: multiply;
+		z-index: 0;
+	}
+
+	.dark body::before {
+		opacity: 0.06;
+		mix-blend-mode: screen;
+		filter: invert(1);
 	}
 
 	/* Markdown コンテンツ内のコードフォントを強制上書き（ハイライトの色には干渉しません） */

@@ -188,7 +188,7 @@ const isDev = import.meta.env.DEV;
 
             {image && (
               <div class="mb-8 overflow-hidden rounded-2xl border border-border/40">
-                <img src={image} alt={title} class="w-full h-auto object-cover aspect-video" fetchpriority="high" />
+                <img src={image} alt={title} class="w-full h-auto object-cover aspect-1200/630" fetchpriority="high" />
               </div>
             )}
 
@@ -223,7 +223,7 @@ const isDev = import.meta.env.DEV;
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                   {related.map((rel: any) => (
                     <a href={`/article/${rel.id}`} class="group flex flex-col gap-3">
-                      <div class="overflow-hidden rounded-xl border border-border aspect-video bg-muted/30">
+                      <div class="overflow-hidden rounded-xl border border-border aspect-1200/630 bg-muted/30">
                         <img 
                           src={rel.data.image || `/ogp/article/${rel.id}.webp`} 
                           alt={rel.data.title} 

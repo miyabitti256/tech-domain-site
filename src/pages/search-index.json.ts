@@ -16,7 +16,7 @@ export const GET: APIRoute = async () => {
 			description: article.data.description,
 			tags: article.data.tags || [],
 			publishedAt: article.data.publishedAt.toISOString(),
-			image: article.data.image || null,
+			image: article.data.image || `/ogp/article/${article.id}.webp`,
 		}));
 
 	return new Response(JSON.stringify(searchIndex), {
